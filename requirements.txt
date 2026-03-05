@@ -1,0 +1,27 @@
+# MediCS Framework — Python Dependencies
+# Install locally with: pip install -r requirements.txt
+
+transformers>=4.46.3
+peft>=0.13.2
+accelerate>=1.1.1
+trl>=0.12.1
+bitsandbytes>=0.44.1
+datasets>=3.1.0
+huggingface-hub>=0.26.2
+safetensors>=0.4.5
+sentencepiece
+protobuf
+openai>=1.30.0
+deep-translator>=1.11.4
+tenacity>=8.2.0
+scipy
+scikit-learn
+matplotlib
+seaborn
+pandas
+pyyaml
+cryptography
+tqdm
+torch
+sentence-transformers
+numpy
