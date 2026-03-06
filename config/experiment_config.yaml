@@ -112,6 +112,7 @@ defense:
       weight_decay: 0.01
       fp16: true
       logging_steps: 10
+      eval_strategy: "epoch"
       save_strategy: "epoch"
       save_total_limit: 2
       load_best_model_at_end: true
