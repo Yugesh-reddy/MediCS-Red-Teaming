@@ -17,6 +17,11 @@ languages. When refusing, explain why clearly. When a question is safe, answer \
 helpfully and completely."""
 
 
+def _get_benign_prompt(bt):
+    """Extract prompt text from a benign twin, handling field name variants."""
+    return bt.get("prompt", bt.get("benign_question", ""))
+
+
 def build_sft_data(jailbreaks, benign_twins):
     """
     Build balanced SFT training data.
@@ -30,7 +35,9 @@ def build_sft_data(jailbreaks, benign_twins):
         benign_twins: list of dicts with 'prompt' and 'category'
 
     Returns:
-        list of SFT training examples with 'messages', 'type', 'category'
+        tuple:
+          - list of SFT training examples with 'messages', 'type', 'category'
+          - dict mapping seed_id -> refusal text for later DPO reuse
     """
     # Generate refusals for jailbreaks (GPT-4o API call)
     refusals = generate_refusal_batch(
@@ -47,11 +54,12 @@ def build_sft_data(jailbreaks, benign_twins):
             ],
             "type": "refusal",
             "category": jb.get("category", ""),
+            "seed_id": jb.get("seed_id", ""),
         })
 
     # Generate helpful responses for benign twins (GPT-4o API call)
     helpful_responses = generate_helpful_batch(
-        [bt["prompt"] for bt in benign_twins]
+        [_get_benign_prompt(bt) for bt in benign_twins]
     )
 
     helpful_examples = []
@@ -59,12 +67,20 @@ def build_sft_data(jailbreaks, benign_twins):
         helpful_examples.append({
             "messages": [
                 {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
-                {"role": "user", "content": bt["prompt"]},
+                {"role": "user", "content": _get_benign_prompt(bt)},
                 {"role": "assistant", "content": response},
             ],
             "type": "helpful",
             "category": bt.get("category", ""),
+            "seed_id": bt.get("seed_id", bt.get("id", "")),
         })
+
+    # Build seed_id → refusal mapping for DPO reuse
+    refusal_map = {}
+    for jb, refusal in zip(jailbreaks, refusals):
+        sid = jb.get("seed_id", "")
+        if sid:
+            refusal_map[sid] = refusal
 
     # Balance 1:1
     min_count = min(len(refusal_examples), len(helpful_examples))
@@ -73,10 +89,15 @@ def build_sft_data(jailbreaks, benign_twins):
 
     print(f"SFT data: {len(balanced)} examples "
           f"({min_count} refusals + {min_count} helpful)")
-    return balanced
+    return balanced, refusal_map
 
 
-def build_dpo_pairs(jailbreaks, refusals, benign_eval_results):
+def build_dpo_pairs(
+    jailbreaks,
+    refusals,
+    benign_eval_results,
+    generate_missing_helpful=True,
+):
     """
     Build DPO preference pairs from EXISTING data. $0 additional API.
 
@@ -97,11 +118,15 @@ def build_dpo_pairs(jailbreaks, refusals, benign_eval_results):
     # Type 1: Attack pairs (chosen=safe refusal, rejected=harmful response)
     for jb in jailbreaks:
         seed_id = jb.get("seed_id", "")
-        if seed_id in refusals:
+        attack_prompt = jb.get("attack_prompt", "")
+        model_response = jb.get("model_response", "")
+        chosen_refusal = refusals.get(seed_id, "")
+
+        if chosen_refusal and attack_prompt and model_response:
             pairs.append({
-                "prompt": jb["attack_prompt"],
-                "chosen": refusals[seed_id],
-                "rejected": jb["model_response"],
+                "prompt": attack_prompt,
+                "chosen": chosen_refusal,
+                "rejected": model_response,
                 "type": "attack_pair",
                 "category": jb.get("category", ""),
                 "strategy": jb.get("strategy", ""),
@@ -109,12 +134,29 @@ def build_dpo_pairs(jailbreaks, refusals, benign_eval_results):
             })
 
     # Type 2: Over-refusal correction pairs
-    for result in benign_eval_results:
-        if result.get("was_incorrectly_refused"):
+    overrefused = [r for r in benign_eval_results if r.get("was_incorrectly_refused")]
+    if overrefused:
+        # Generate expected helpful responses for entries that lack them.
+        # Keep this optional because DPO build is intended to be a $0 API step.
+        needs_gen = [r for r in overrefused if not r.get("expected_helpful_response")]
+        if generate_missing_helpful and needs_gen:
+            prompts = [
+                r.get("benign_prompt", r.get("prompt", "")) for r in needs_gen
+            ]
+            helpful = generate_helpful_batch(prompts)
+            for r, h in zip(needs_gen, helpful):
+                r["expected_helpful_response"] = h
+
+        for result in overrefused:
+            prompt = result.get("benign_prompt", result.get("prompt", ""))
+            chosen = result.get("expected_helpful_response", "")
+            rejected = result.get("model_refusal", result.get("model_response", ""))
+            if not prompt or not chosen or not rejected:
+                continue
             pairs.append({
-                "prompt": result.get("benign_prompt", result.get("prompt", "")),
-                "chosen": result.get("expected_helpful_response", ""),
-                "rejected": result.get("model_refusal", result.get("model_response", "")),
+                "prompt": prompt,
+                "chosen": chosen,
+                "rejected": rejected,
                 "type": "overrefusal_correction",
                 "category": result.get("category", ""),
             })
