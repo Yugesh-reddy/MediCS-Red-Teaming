@@ -17,9 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from medics.utils import load_jsonl, save_jsonl
-
-TRANSFER_MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
+from medics.utils import load_jsonl, save_jsonl, load_config
 
 
 def main():
@@ -27,11 +25,17 @@ def main():
     parser.add_argument("--input", required=True,
                         help="Input JSONL file with prompts")
     parser.add_argument("--output", default="results/transfer/mistral_results.jsonl")
-    parser.add_argument("--model", default=TRANSFER_MODEL)
+    parser.add_argument("--model", default=None,
+                        help="Override transfer model ID from config")
+    parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
 
+    cfg = load_config(args.config)
+    transfer_model = args.model or cfg["transfer"]["model_id"]
+    gen_cfg = cfg["target_model"].get("generation", {})
+
     print(f"=== Transfer Evaluation: Mistral-7B ===")
-    print(f"Model: {args.model}")
+    print(f"Model: {transfer_model}")
     print(f"Input: {args.input}")
 
     # Load model (same 4-bit quantization)
@@ -42,9 +46,9 @@ def main():
         bnb_4bit_use_double_quant=True,
     )
     model = AutoModelForCausalLM.from_pretrained(
-        args.model, quantization_config=bnb_config, device_map="auto"
+        transfer_model, quantization_config=bnb_config, device_map="auto"
     )
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(transfer_model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -62,10 +66,10 @@ def main():
         with torch.no_grad():
             output = model.generate(
                 **inputs,
-                max_new_tokens=512,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9,
+                max_new_tokens=gen_cfg.get("max_new_tokens", 512),
+                do_sample=gen_cfg.get("do_sample", True),
+                temperature=gen_cfg.get("temperature", 0.7),
+                top_p=gen_cfg.get("top_p", 0.9),
             )
         response = tokenizer.decode(
             output[0][inputs.input_ids.shape[1]:],
@@ -75,7 +79,7 @@ def main():
         result = {
             **prompt_data,
             "model_response": response,
-            "transfer_model": args.model,
+            "transfer_model": transfer_model,
         }
         results.append(result)
 
