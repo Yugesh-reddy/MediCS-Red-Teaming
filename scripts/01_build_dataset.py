@@ -25,7 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from medics.utils import (
-    load_jsonl, save_jsonl, save_json, load_json, load_config,
+    load_jsonl, load_seeds, save_jsonl, save_json, load_json, load_config,
     extract_keywords_batch, code_switch_prompt,
     back_translate, compute_semantic_similarity, deduplicate,
     flush_translation_cache,
@@ -49,26 +49,28 @@ def main(config_path, skip_seeds=False, verify_only=False):
     print(f"Semantic threshold: {threshold}")
 
     # --- Step 1-2: Load and deduplicate seeds ---
+    deduped_path = data_dir / "seeds/deduped_seeds.jsonl"
     if not skip_seeds and not verify_only:
         print("\n--- Step 1-2: Loading and deduplicating seeds ---")
-        seeds = load_jsonl(data_dir / "seeds/raw_seeds.jsonl")
+        seeds = load_seeds(data_dir / "seeds/raw_seeds.jsonl")
         print(f"Loaded {len(seeds)} raw seeds")
         seeds = deduplicate(seeds, threshold=config["dataset"].get(
             "dedup_similarity_threshold", 0.85))
-        print(f"After dedup: {len(seeds)} seeds")
+        save_jsonl(seeds, deduped_path)
+        print(f"After dedup: {len(seeds)} seeds → saved to {deduped_path}")
 
     # --- Step 3: Keyword extraction ---
     if not verify_only:
         print("\n--- Step 3: Extracting keywords ---")
-        seeds = load_jsonl(data_dir / "seeds/raw_seeds.jsonl")
+        seeds = load_seeds(deduped_path) if deduped_path.exists() else load_seeds(data_dir / "seeds/raw_seeds.jsonl")
         keywords = extract_keywords_batch(seeds, model="gpt-4o-mini")
         save_json(keywords, data_dir / "seeds/keywords_checkpoint.json")
         print(f"Extracted keywords for {len(keywords)} seeds")
 
-    # --- Step 4: Code-switching (6 languages × 500 seeds = 3,000 variants) ---
+    # --- Step 4: Code-switching (6 languages × N seeds = N*6 variants) ---
     if not verify_only:
         print("\n--- Step 4: Code-switching ---")
-        seeds = load_jsonl(data_dir / "seeds/raw_seeds.jsonl")
+        seeds = load_seeds(deduped_path) if deduped_path.exists() else load_seeds(data_dir / "seeds/raw_seeds.jsonl")
         keywords = load_json(data_dir / "seeds/keywords_checkpoint.json")
         variants = []
         for seed in seeds:
