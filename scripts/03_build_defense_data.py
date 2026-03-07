@@ -44,10 +44,32 @@ def main():
         benign_twins = load_jsonl("data/seeds/benign_twins.jsonl")
         print(f"Benign twins: {len(benign_twins)}")
 
-        sft_data = build_sft_data(all_jailbreaks, benign_twins)
+        sft_data, refusal_map = build_sft_data(all_jailbreaks, benign_twins)
         output_path = f"data/defense/sft_round_{'_'.join(map(str, rounds))}.json"
         save_json(sft_data, output_path)
         print(f"SFT data saved: {output_path} ({len(sft_data)} examples)")
+
+        # Save refusal map for DPO reuse
+        save_json(refusal_map, "data/defense/refusals.json")
+        print(f"Refusal map saved: data/defense/refusals.json ({len(refusal_map)} entries)")
+
+        # Save helpful targets for potential DPO over-refusal correction reuse
+        helpful_targets = {}
+        for ex in sft_data:
+            if ex.get("type") != "helpful":
+                continue
+            messages = ex.get("messages", [])
+            if len(messages) < 3:
+                continue
+            prompt = messages[1].get("content", "")
+            helpful = messages[2].get("content", "")
+            if prompt and helpful:
+                helpful_targets[prompt] = helpful
+        save_json(helpful_targets, "data/defense/helpful_targets.json")
+        print(
+            "Helpful targets saved: data/defense/helpful_targets.json "
+            f"({len(helpful_targets)} entries)"
+        )
 
     elif args.type == "dpo":
         # DPO uses accumulated data from all rounds — $0 additional API
@@ -67,10 +89,36 @@ def main():
         refusals = load_json("data/defense/refusals.json")
         if refusals is None:
             refusals = {}
-            print("WARNING: No refusals.json found. DPO pairs will only include "
-                  "over-refusal corrections.")
+            print("WARNING: No refusals.json found. Run --type sft first. "
+                  "DPO pairs will only include over-refusal corrections.")
 
-        dpo_pairs = build_dpo_pairs(all_jailbreaks, refusals, all_benign_eval)
+        helpful_targets = load_json("data/defense/helpful_targets.json")
+        if helpful_targets is None:
+            helpful_targets = {}
+            print("WARNING: No helpful_targets.json found. Missing over-refusal "
+                  "helpful targets will be skipped to keep DPO build at $0 API.")
+
+        # Enrich benign eval results with original prompt text
+        benign_twins = load_jsonl("data/seeds/benign_twins.jsonl")
+        bt_lookup = {}
+        for bt in benign_twins:
+            sid = bt.get("id", bt.get("seed_id", ""))
+            if sid:
+                bt_lookup[sid] = bt.get("prompt", bt.get("benign_question", ""))
+        for r in all_benign_eval:
+            sid = r.get("seed_id", "")
+            if sid in bt_lookup and "benign_prompt" not in r:
+                r["benign_prompt"] = bt_lookup[sid]
+            prompt = r.get("benign_prompt", r.get("prompt", ""))
+            if prompt and not r.get("expected_helpful_response") and prompt in helpful_targets:
+                r["expected_helpful_response"] = helpful_targets[prompt]
+
+        dpo_pairs = build_dpo_pairs(
+            all_jailbreaks,
+            refusals,
+            all_benign_eval,
+            generate_missing_helpful=False,
+        )
         save_json(dpo_pairs, "data/defense/dpo_pairs.json")
         print(f"DPO pairs saved: data/defense/dpo_pairs.json ({len(dpo_pairs)} pairs)")
 

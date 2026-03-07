@@ -8,6 +8,7 @@ Refactored from utils/medics_utils.py into clean importable module.
 """
 
 import os
+import re
 import sys
 import json
 import time
@@ -77,6 +78,23 @@ def load_jsonl(path):
         return []
     with open(path, "r") as f:
         return [json.loads(line) for line in f if line.strip()]
+
+
+def normalize_seed(seed):
+    """Normalize seed field names from convert script format to pipeline format.
+
+    Handles: 'original_en' -> 'prompt', 'id' -> 'seed_id'.
+    """
+    if "prompt" not in seed and "original_en" in seed:
+        seed["prompt"] = seed["original_en"]
+    if "seed_id" not in seed and "id" in seed:
+        seed["seed_id"] = seed["id"]
+    return seed
+
+
+def load_seeds(path):
+    """Load seed prompts and normalize field names."""
+    return [normalize_seed(s) for s in load_jsonl(path)]
 
 
 def save_jsonl(data, path):
@@ -358,12 +376,16 @@ def code_switch_prompt(seed, keywords, language, cache_path=None):
     else:
         kw_list = keywords
 
-    # Translate each keyword
+    # Translate each keyword (case-insensitive replacement)
     translated_prompt = prompt
     for kw in kw_list:
-        if kw.lower() in prompt.lower():
+        if kw.lower() in translated_prompt.lower():
             translation = translate_with_fallback(kw, source="en", target=language)
-            translated_prompt = translated_prompt.replace(kw, translation["translation"])
+            # Case-insensitive replace
+            translated_prompt = re.sub(
+                re.escape(kw), translation["translation"],
+                translated_prompt, flags=re.IGNORECASE
+            )
 
     return {
         "attack_prompt": translated_prompt,
