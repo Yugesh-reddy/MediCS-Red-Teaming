@@ -31,7 +31,8 @@ from medics.utils import load_jsonl, save_jsonl, load_json, load_config
 
 def generate_attacks(config, round_num, attack_pool, keywords):
     """Phase 1: Generate attack prompts using Thompson Sampling."""
-    available = get_available_strategies(round_num)
+    curriculum = config.get("red_team", {}).get("curriculum")
+    available = get_available_strategies(round_num, curriculum=curriculum)
     categories = config.get("categories", ["TOX", "SH", "MIS", "ULP", "PPV", "UCA"])
     bandit = ThompsonBandit(arms=available, categories=categories)
 
@@ -40,10 +41,16 @@ def generate_attacks(config, round_num, attack_pool, keywords):
     if prev_state.exists():
         print(f"Loading bandit state from round {round_num - 1}")
         bandit = ThompsonBandit.load(prev_state)
-        # Filter to only available strategies for this round
+        # Expand bandit with new strategies while preserving history
         if set(bandit.arms) != set(available):
-            print(f"Reinitializing bandit for new strategies: {available}")
-            bandit = ThompsonBandit(arms=available, categories=categories)
+            new_arms = [a for a in available if a not in bandit.arms]
+            if new_arms:
+                print(f"Expanding bandit with new strategies: {new_arms}")
+                bandit.expand_arms(new_arms)
+            # Remove arms no longer available (shouldn't happen with curriculum)
+            removed = [a for a in bandit.arms if a not in available]
+            if removed:
+                print(f"WARNING: strategies removed from curriculum: {removed}")
 
     languages = [lang["code"] for lang in config["dataset"]["languages"]]
     attacks = []
