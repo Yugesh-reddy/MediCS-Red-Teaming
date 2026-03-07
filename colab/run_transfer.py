@@ -38,12 +38,12 @@ def main():
     print(f"Model: {transfer_model}")
     print(f"Input: {args.input}")
 
-    # Load model (same 4-bit quantization)
+    # Load model (same 4-bit quantization, read from config)
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
+        bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
         bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
+        bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     model = AutoModelForCausalLM.from_pretrained(
         transfer_model, quantization_config=bnb_config, device_map="auto"
@@ -62,7 +62,11 @@ def main():
         prompt = (prompt_data.get("attack_prompt") or
                   prompt_data.get("prompt", ""))
 
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        messages = [{"role": "user", "content": prompt}]
+        text = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        inputs = tokenizer(text, return_tensors="pt").to(model.device)
         with torch.no_grad():
             output = model.generate(
                 **inputs,
