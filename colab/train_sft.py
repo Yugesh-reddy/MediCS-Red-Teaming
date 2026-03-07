@@ -76,7 +76,14 @@ def main():
     model.print_trainable_parameters()
 
     # --- Data ---
-    data_path = f"data/defense/sft_round_{args.round}.json"
+    # Match naming from 03_build_defense_data.py: sft_round_1.json, sft_round_1_2.json, etc.
+    data_path = Path(f"data/defense/sft_round_{args.round}.json")
+    if not data_path.exists():
+        # Try accumulated naming pattern (e.g., sft_round_1_2.json for round 2)
+        candidates = sorted(Path("data/defense").glob(f"sft_round_*{args.round}.json"))
+        if candidates:
+            data_path = candidates[-1]
+            print(f"Using accumulated SFT data: {data_path}")
     data = json.load(open(data_path))
     random.shuffle(data)
     split = int(len(data) * 0.9)
