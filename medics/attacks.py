@@ -121,17 +121,29 @@ def apply_strategy(seed: dict, strategy: Strategy,
         raise ValueError(f"Unknown strategy: {strategy}")
 
 
-def get_available_strategies(round_num: int) -> list:
+_DEFAULT_CURRICULUM = {
+    1: ["CS", "RP"],
+    2: ["CS", "RP", "CS-RP"],
+    3: ["CS", "RP", "MTE", "CS-RP", "CS-OBF"],
+}
+
+
+def get_available_strategies(round_num: int, curriculum=None) -> list:
     """
     Get available strategies for a given round (curriculum).
 
-    Round 1: CS, RP (simple)
-    Round 2: CS, RP, CS-RP (medium)
-    Round 3+: All 5 strategies
+    Args:
+        round_num: attack round number (1-indexed)
+        curriculum: dict mapping round_num -> list of strategy names.
+                    If None, uses the default curriculum.
+                    Should be read from config["red_team"]["curriculum"].
+
+    Returns:
+        list of strategy name strings available for this round
     """
-    curriculum = {
-        1: ["CS", "RP"],
-        2: ["CS", "RP", "CS-RP"],
-        3: ["CS", "RP", "MTE", "CS-RP", "CS-OBF"],
-    }
-    return curriculum.get(round_num, curriculum[3])
+    if curriculum is None:
+        curriculum = _DEFAULT_CURRICULUM
+    # Config YAML may parse keys as int or str; normalize to int
+    normalized = {int(k): v for k, v in curriculum.items()}
+    max_round = max(normalized.keys())
+    return normalized.get(round_num, normalized[max_round])
