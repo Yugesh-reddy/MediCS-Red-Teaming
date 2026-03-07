@@ -19,6 +19,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
 from medics.utils import load_jsonl, save_jsonl, load_config
+from medics.defense import MEDICAL_SYSTEM_PROMPT
 
 
 def load_model(model_id, checkpoint, cfg):
@@ -56,7 +57,14 @@ def run_inference(model, tokenizer, prompts, gen_cfg):
         prompt = (prompt_data.get("attack_prompt") or
                   prompt_data.get("prompt", ""))
 
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        messages = [
+            {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        text = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        inputs = tokenizer(text, return_tensors="pt").to(model.device)
         with torch.no_grad():
             output = model.generate(
                 **inputs,
