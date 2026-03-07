@@ -21,40 +21,51 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel, LoraConfig, get_peft_model, TaskType
 from trl import DPOTrainer, DPOConfig
 
+from medics.utils import load_config
+
 
 def main():
     parser = argparse.ArgumentParser(description="DPO preference training")
     parser.add_argument("--sft-checkpoint", required=True,
                         help="Path to final SFT adapter")
-    parser.add_argument("--model", default="meta-llama/Meta-Llama-3-8B-Instruct")
+    parser.add_argument("--model", default=None,
+                        help="Override model ID from config")
+    parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
 
+    cfg = load_config(args.config)
+    model_id = args.model or cfg["target_model"]["model_id"]
+    dpo_cfg = cfg["defense"]["dpo"]
+    lora_cfg = dpo_cfg["lora"]
+    train_cfg = dpo_cfg["training"]
+
     print("=== DPO Preference Optimization ===")
+    print(f"Model: {model_id}")
 
     # --- Load base + merge SFT ---
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
+        bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
         bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
+        bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     base = AutoModelForCausalLM.from_pretrained(
-        args.model, quantization_config=bnb_config, device_map="auto"
+        model_id, quantization_config=bnb_config, device_map="auto"
     )
     print(f"Merging SFT adapter: {args.sft_checkpoint}")
     model = PeftModel.from_pretrained(base, args.sft_checkpoint)
     model = model.merge_and_unload()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     # --- Fresh LoRA for DPO ---
     dpo_lora = LoraConfig(
-        r=8,
-        lora_alpha=16,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        lora_dropout=0.05,
+        r=lora_cfg["r"],
+        lora_alpha=lora_cfg["alpha"],
+        target_modules=lora_cfg["target_modules"],
+        lora_dropout=lora_cfg.get("dropout", 0.05),
         task_type=TaskType.CAUSAL_LM,
     )
     model = get_peft_model(model, dpo_lora)
@@ -71,19 +82,19 @@ def main():
 
     config = DPOConfig(
         output_dir=output_dir,
-        num_train_epochs=1,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=16,
-        learning_rate=5e-5,
-        beta=0.1,
-        loss_type="sigmoid",
-        fp16=True,
-        logging_steps=10,
-        save_strategy="epoch",
-        max_length=1024,
-        max_prompt_length=512,
-        gradient_checkpointing=True,
-        seed=42,
+        num_train_epochs=train_cfg["num_epochs"],
+        per_device_train_batch_size=train_cfg["per_device_batch_size"],
+        gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
+        learning_rate=train_cfg["learning_rate"],
+        beta=train_cfg["beta"],
+        loss_type=train_cfg.get("loss_type", "sigmoid"),
+        fp16=train_cfg.get("fp16", True),
+        logging_steps=train_cfg.get("logging_steps", 10),
+        save_strategy=train_cfg.get("save_strategy", "epoch"),
+        max_length=train_cfg.get("max_length", 1024),
+        max_prompt_length=train_cfg.get("max_prompt_length", 512),
+        gradient_checkpointing=train_cfg.get("gradient_checkpointing", True),
+        seed=train_cfg.get("seed", 42),
     )
 
     trainer = DPOTrainer(

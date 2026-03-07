@@ -21,28 +21,39 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, TaskType, PeftModel
 from trl import SFTTrainer, SFTConfig
 
+from medics.utils import load_config
+
 
 def main():
     parser = argparse.ArgumentParser(description="QLoRA-SFT training")
     parser.add_argument("--round", type=int, required=True)
-    parser.add_argument("--model", default="meta-llama/Meta-Llama-3-8B-Instruct")
+    parser.add_argument("--model", default=None,
+                        help="Override model ID from config")
     parser.add_argument("--prev-checkpoint", default=None,
                         help="Resume from previous round's adapter")
+    parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
 
+    cfg = load_config(args.config)
+    model_id = args.model or cfg["target_model"]["model_id"]
+    sft_cfg = cfg["defense"]["sft"]
+    lora_cfg = sft_cfg["lora"]
+    train_cfg = sft_cfg["training"]
+
     print(f"=== QLoRA-SFT Training: Round {args.round} ===")
+    print(f"Model: {model_id}")
 
     # --- Load model (4-bit) ---
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
+        bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
         bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
+        bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     model = AutoModelForCausalLM.from_pretrained(
-        args.model, quantization_config=bnb_config, device_map="auto"
+        model_id, quantization_config=bnb_config, device_map="auto"
     )
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -54,19 +65,25 @@ def main():
 
     # --- LoRA ---
     lora_config = LoraConfig(
-        r=16,
-        lora_alpha=32,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                         "gate_proj", "up_proj", "down_proj"],
-        lora_dropout=0.05,
+        r=lora_cfg["r"],
+        lora_alpha=lora_cfg["alpha"],
+        target_modules=lora_cfg["target_modules"],
+        lora_dropout=lora_cfg["dropout"],
         task_type=TaskType.CAUSAL_LM,
-        bias="none",
+        bias=lora_cfg.get("bias", "none"),
     )
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
     # --- Data ---
-    data_path = f"data/defense/sft_round_{args.round}.json"
+    # Match naming from 03_build_defense_data.py: sft_round_1.json, sft_round_1_2.json, etc.
+    data_path = Path(f"data/defense/sft_round_{args.round}.json")
+    if not data_path.exists():
+        # Try accumulated naming pattern (e.g., sft_round_1_2.json for round 2)
+        candidates = sorted(Path("data/defense").glob(f"sft_round_*{args.round}.json"))
+        if candidates:
+            data_path = candidates[-1]
+            print(f"Using accumulated SFT data: {data_path}")
     data = json.load(open(data_path))
     random.shuffle(data)
     split = int(len(data) * 0.9)
@@ -87,23 +104,23 @@ def main():
 
     config = SFTConfig(
         output_dir=output_dir,
-        num_train_epochs=3,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=8,
-        learning_rate=2e-4,
-        lr_scheduler_type="cosine",
-        warmup_ratio=0.1,
-        weight_decay=0.01,
-        fp16=True,
-        logging_steps=10,
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        save_total_limit=2,
-        load_best_model_at_end=True,
-        gradient_checkpointing=True,
-        max_seq_length=1024,
+        num_train_epochs=train_cfg["num_epochs"],
+        per_device_train_batch_size=train_cfg["per_device_batch_size"],
+        gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
+        learning_rate=train_cfg["learning_rate"],
+        lr_scheduler_type=train_cfg.get("lr_scheduler", "cosine"),
+        warmup_ratio=train_cfg.get("warmup_ratio", 0.1),
+        weight_decay=train_cfg.get("weight_decay", 0.01),
+        fp16=train_cfg.get("fp16", True),
+        logging_steps=train_cfg.get("logging_steps", 10),
+        eval_strategy=train_cfg.get("eval_strategy", "epoch"),
+        save_strategy=train_cfg.get("save_strategy", "epoch"),
+        save_total_limit=train_cfg.get("save_total_limit", 2),
+        load_best_model_at_end=train_cfg.get("load_best_model_at_end", True),
+        gradient_checkpointing=train_cfg.get("gradient_checkpointing", True),
+        max_seq_length=train_cfg.get("max_seq_length", 1024),
         dataset_text_field="text",
-        seed=42,
+        seed=train_cfg.get("seed", 42),
     )
 
     trainer = SFTTrainer(

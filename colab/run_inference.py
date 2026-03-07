@@ -18,16 +18,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
-from medics.utils import load_jsonl, save_jsonl
+from medics.utils import load_jsonl, save_jsonl, load_config
+from medics.defense import MEDICAL_SYSTEM_PROMPT
 
 
-def load_model(model_id, checkpoint):
+def load_model(model_id, checkpoint, cfg):
     """Load model with optional adapter."""
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
+        bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
         bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
+        bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     model = AutoModelForCausalLM.from_pretrained(
         model_id, quantization_config=bnb_config, device_map="auto"
@@ -44,21 +45,33 @@ def load_model(model_id, checkpoint):
     return model, tokenizer
 
 
-def run_inference(model, tokenizer, prompts, max_new_tokens=512):
+def run_inference(model, tokenizer, prompts, gen_cfg):
     """Run inference on a batch of prompts."""
+    max_new_tokens = gen_cfg.get("max_new_tokens", 512)
+    temperature = gen_cfg.get("temperature", 0.7)
+    top_p = gen_cfg.get("top_p", 0.9)
+    do_sample = gen_cfg.get("do_sample", True)
+
     results = []
     for i, prompt_data in enumerate(prompts):
         prompt = (prompt_data.get("attack_prompt") or
                   prompt_data.get("prompt", ""))
 
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        messages = [
+            {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        text = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        inputs = tokenizer(text, return_tensors="pt").to(model.device)
         with torch.no_grad():
             output = model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
             )
         response = tokenizer.decode(
             output[0][inputs.input_ids.shape[1]:],
@@ -82,19 +95,26 @@ def main():
                         help="Input JSONL file with prompts")
     parser.add_argument("--output", required=True,
                         help="Output JSONL file for responses")
-    parser.add_argument("--model", default="meta-llama/Meta-Llama-3-8B-Instruct")
+    parser.add_argument("--model", default=None,
+                        help="Override model ID from config")
+    parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
 
+    cfg = load_config(args.config)
+    model_id = args.model or cfg["target_model"]["model_id"]
+    gen_cfg = cfg["target_model"].get("generation", {})
+
     print(f"=== Llama-3 Inference ===")
+    print(f"Model: {model_id}")
     print(f"Checkpoint: {args.checkpoint}")
     print(f"Input: {args.input}")
 
-    model, tokenizer = load_model(args.model, args.checkpoint)
+    model, tokenizer = load_model(model_id, args.checkpoint, cfg)
     prompts = load_jsonl(args.input)
     print(f"Loaded {len(prompts)} prompts")
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    results = run_inference(model, tokenizer, prompts)
+    results = run_inference(model, tokenizer, prompts, gen_cfg)
     save_jsonl(results, args.output)
     print(f"\nInference done: {len(results)} responses → {args.output}")
 

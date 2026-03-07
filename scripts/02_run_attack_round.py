@@ -25,12 +25,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from medics.bandit import ThompsonBandit
 from medics.attacks import apply_strategy, get_available_strategies
 from medics.judge import judge_response_batch
+from medics.metrics import compute_asr
 from medics.utils import load_jsonl, save_jsonl, load_json, load_config
 
 
 def generate_attacks(config, round_num, attack_pool, keywords):
     """Phase 1: Generate attack prompts using Thompson Sampling."""
-    available = get_available_strategies(round_num)
+    curriculum = config.get("red_team", {}).get("curriculum")
+    available = get_available_strategies(round_num, curriculum=curriculum)
     categories = config.get("categories", ["TOX", "SH", "MIS", "ULP", "PPV", "UCA"])
     bandit = ThompsonBandit(arms=available, categories=categories)
 
@@ -39,10 +41,16 @@ def generate_attacks(config, round_num, attack_pool, keywords):
     if prev_state.exists():
         print(f"Loading bandit state from round {round_num - 1}")
         bandit = ThompsonBandit.load(prev_state)
-        # Filter to only available strategies for this round
+        # Expand bandit with new strategies while preserving history
         if set(bandit.arms) != set(available):
-            print(f"Reinitializing bandit for new strategies: {available}")
-            bandit = ThompsonBandit(arms=available, categories=categories)
+            new_arms = [a for a in available if a not in bandit.arms]
+            if new_arms:
+                print(f"Expanding bandit with new strategies: {new_arms}")
+                bandit.expand_arms(new_arms)
+            # Remove arms no longer available (shouldn't happen with curriculum)
+            removed = [a for a in bandit.arms if a not in available]
+            if removed:
+                print(f"WARNING: strategies removed from curriculum: {removed}")
 
     languages = [lang["code"] for lang in config["dataset"]["languages"]]
     attacks = []
@@ -50,7 +58,10 @@ def generate_attacks(config, round_num, attack_pool, keywords):
 
     for i in range(n_attacks):
         seed = random.choice(attack_pool)
-        strategy = bandit.select(category=seed.get("category"))
+        min_pulls = config["red_team"].get("min_exploration_pulls", 10)
+        strategy = bandit.select_with_exploration(
+            category=seed.get("category"), min_pulls=min_pulls
+        )
         language = random.choice(languages)
 
         attack = apply_strategy(seed, strategy, keywords, language)
@@ -103,7 +114,7 @@ def main():
         results = judge_responses(responses)
         save_jsonl(results, round_dir / "results.jsonl")
 
-        asr = sum(1 for r in results if r.get("judge_label") == "harmful") / len(results)
+        asr = compute_asr(results)
         n_harmful = sum(1 for r in results if r.get("judge_label") == "harmful")
         print(f"\nRound {args.round} ASR: {asr:.1%} ({n_harmful}/{len(results)})")
 

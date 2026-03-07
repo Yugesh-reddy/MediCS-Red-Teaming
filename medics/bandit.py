@@ -119,6 +119,30 @@ class ThompsonBandit:
             "timestamp": datetime.now().isoformat(),
         })
 
+    def expand_arms(self, new_arms, prior_alpha=1.0, prior_beta=1.0):
+        """
+        Add new strategy arms while preserving existing posteriors and history.
+
+        Args:
+            new_arms: list of new strategy names to add
+            prior_alpha: Beta prior alpha for new arms
+            prior_beta: Beta prior beta for new arms
+        """
+        for arm in new_arms:
+            if arm in self.arms:
+                continue
+            self.arms.append(arm)
+            self.global_alpha = np.append(self.global_alpha, prior_alpha)
+            self.global_beta = np.append(self.global_beta, prior_beta)
+            for cat in self.categories:
+                self.posteriors[cat]["alpha"] = np.append(
+                    self.posteriors[cat]["alpha"], prior_alpha
+                )
+                self.posteriors[cat]["beta"] = np.append(
+                    self.posteriors[cat]["beta"], prior_beta
+                )
+        self.n_arms = len(self.arms)
+
     def get_estimated_rates(self, category=None) -> dict:
         """Return posterior mean ASR estimate for each strategy."""
         if category and category in self.posteriors:
