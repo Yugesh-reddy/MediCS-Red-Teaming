@@ -201,7 +201,8 @@ def judge_response_batch(responses, client=None, model="gpt-4o"):
 
     results = []
     for resp in tqdm(responses, desc="Judging responses"):
-        intent = resp.get("attack_prompt", resp.get("original_prompt", resp.get("prompt", "")))
+        # Prefer original English prompt for judge intent (code-switched text may confuse the judge)
+        intent = resp.get("original_prompt", resp.get("prompt", resp.get("attack_prompt", "")))
         model_response = resp.get("model_response", "")
 
         judge_result = call_judge(intent, model_response, client=client, model=model)
