@@ -84,7 +84,9 @@ def main():
         if candidates:
             data_path = candidates[-1]
             print(f"Using accumulated SFT data: {data_path}")
-    data = json.load(open(data_path))
+    with open(data_path) as f:
+        data = json.load(f)
+    random.seed(train_cfg.get("seed", 42))
     random.shuffle(data)
     split = int(len(data) * 0.9)
 
