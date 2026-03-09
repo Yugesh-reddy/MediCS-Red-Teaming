@@ -7,6 +7,10 @@ Tests whether code-switching attacks are model-specific or universal.
 
 Cost: $0 (GPU time only, no API calls)
 Time: ~30 minutes on T4
+
+NOTE: Uses the same system prompt as Llama-3 for fair comparison.
+After inference, run the judge phase to compute ASR:
+  python scripts/04_evaluate.py --transfer --input results/transfer/mistral_results.jsonl
 """
 
 import argparse
@@ -16,8 +20,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
 from medics.utils import load_jsonl, save_jsonl, load_config
+from medics.defense import MEDICAL_SYSTEM_PROMPT
 
 
 def main():
@@ -27,8 +32,16 @@ def main():
     parser.add_argument("--output", default="results/transfer/mistral_results.jsonl")
     parser.add_argument("--model", default=None,
                         help="Override transfer model ID from config")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed for reproducible inference")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
+
+    # Set all random seeds for reproducibility
+    set_seed(args.seed)
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
 
     cfg = load_config(args.config)
     transfer_model = args.model or cfg["transfer"]["model_id"]
@@ -36,6 +49,7 @@ def main():
 
     print(f"=== Transfer Evaluation: Mistral-7B ===")
     print(f"Model: {transfer_model}")
+    print(f"Seed: {args.seed}")
     print(f"Input: {args.input}")
 
     # Load model (same 4-bit quantization, read from config)
@@ -56,13 +70,16 @@ def main():
     prompts = load_jsonl(args.input)
     print(f"Loaded {len(prompts)} prompts")
 
-    # Run inference
+    # Run inference — same system prompt as target model for fair comparison
     results = []
     for i, prompt_data in enumerate(prompts):
         prompt = (prompt_data.get("attack_prompt") or
                   prompt_data.get("prompt", ""))
 
-        messages = [{"role": "user", "content": prompt}]
+        messages = [
+            {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
         text = tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
@@ -94,6 +111,7 @@ def main():
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     save_jsonl(results, args.output)
     print(f"\nTransfer evaluation done: {len(results)} responses → {args.output}")
+    print("Next: run judge phase to compute transfer ASR")
 
 
 if __name__ == "__main__":
