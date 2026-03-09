@@ -28,7 +28,7 @@ class ThompsonBandit:
     """
 
     def __init__(self, arms=None, categories=None,
-                 prior_alpha=1.0, prior_beta=1.0):
+                 prior_alpha=1.0, prior_beta=1.0, seed=None):
         if arms is None:
             arms = ["CS", "RP", "MTE", "CS-RP", "CS-OBF"]
         if categories is None:
@@ -37,6 +37,7 @@ class ThompsonBandit:
         self.arms = list(arms)
         self.categories = list(categories)
         self.n_arms = len(self.arms)
+        self.rng = np.random.RandomState(seed)
 
         # Per-category posteriors: {category: {"alpha": [...], "beta": [...]}}
         self.posteriors = {}
@@ -70,7 +71,7 @@ class ThompsonBandit:
             beta = self.global_beta
 
         samples = np.array([
-            np.random.beta(alpha[i], beta[i])
+            self.rng.beta(alpha[i], beta[i])
             for i in range(self.n_arms)
         ])
         arm_idx = int(np.argmax(samples))
@@ -81,7 +82,7 @@ class ThompsonBandit:
         counts = self._get_pull_counts(category)
         under_explored = np.where(counts < min_pulls)[0]
         if len(under_explored) > 0:
-            return self.arms[int(np.random.choice(under_explored))]
+            return self.arms[int(self.rng.choice(under_explored))]
         return self.select(category)
 
     def update(self, strategy: str, reward: float, category=None):
@@ -175,6 +176,13 @@ class ThompsonBandit:
         state = {
             "arms": self.arms,
             "categories": self.categories,
+            # Save full RNG state tuple: (str, ndarray, int, int, float)
+            "rng_state": {
+                "keys": self.rng.get_state()[1].tolist(),
+                "pos": int(self.rng.get_state()[2]),
+                "has_gauss": int(self.rng.get_state()[3]),
+                "cached_gaussian": float(self.rng.get_state()[4]),
+            },
             "global_alpha": self.global_alpha.tolist(),
             "global_beta": self.global_beta.tolist(),
             "posteriors": {
@@ -210,6 +218,20 @@ class ThompsonBandit:
                     bandit.posteriors[cat]["beta"] = np.array(state["posteriors"][cat]["beta"])
 
         bandit.history = state.get("history", [])
+        # Restore full RNG state if saved
+        if "rng_state" in state:
+            rng_data = state["rng_state"]
+            if isinstance(rng_data, dict):
+                # New format: full 5-tuple
+                keys = np.array(rng_data["keys"], dtype=np.uint32)
+                pos = rng_data.get("pos", 624)
+                has_gauss = rng_data.get("has_gauss", 0)
+                cached = rng_data.get("cached_gaussian", 0.0)
+                bandit.rng.set_state(("MT19937", keys, pos, has_gauss, cached))
+            else:
+                # Legacy format: just the keys array
+                keys = np.array(rng_data, dtype=np.uint32)
+                bandit.rng.set_state(("MT19937", keys, 624, 0, 0.0))
         return bandit
 
     def __repr__(self):
