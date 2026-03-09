@@ -9,14 +9,12 @@ Refactored from utils/medics_utils.py into clean importable module.
 
 import os
 import re
-import sys
 import json
 import time
 import random
 import hashlib
 import base64
 import getpass
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -310,6 +308,7 @@ def flush_translation_cache():
 def extract_keywords_batch(seeds, model="gpt-4o-mini"):
     """
     Extract sensitive medical keywords from seed prompts using GPT-4o-mini.
+    Tracks API usage via judge.track_external_usage for cost accounting.
 
     Args:
         seeds: List of seed dicts with 'prompt' and 'seed_id' fields.
@@ -319,6 +318,7 @@ def extract_keywords_batch(seeds, model="gpt-4o-mini"):
         dict: {seed_id: [keyword1, keyword2, ...]}
     """
     from openai import OpenAI
+    from medics.judge import track_external_usage
     client = OpenAI()
 
     keywords = {}
@@ -336,6 +336,13 @@ def extract_keywords_batch(seeds, model="gpt-4o-mini"):
                 temperature=0.0,
                 response_format={"type": "json_object"},
             )
+            # Track cost via judge module
+            usage = getattr(response, "usage", None)
+            if usage:
+                track_external_usage(
+                    usage.prompt_tokens, usage.completion_tokens,
+                    task="keyword_extraction", model=model,
+                )
             result = json.loads(response.choices[0].message.content)
             kw_list = result.get("keywords", result.get("result", []))
             if isinstance(kw_list, list):
@@ -381,9 +388,10 @@ def code_switch_prompt(seed, keywords, language, cache_path=None):
     for kw in kw_list:
         if kw.lower() in translated_prompt.lower():
             translation = translate_with_fallback(kw, source="en", target=language)
-            # Case-insensitive replace
+            # Case-insensitive replace (use lambda to avoid backreference issues)
+            replacement = translation["translation"]
             translated_prompt = re.sub(
-                re.escape(kw), translation["translation"],
+                re.escape(kw), lambda m: replacement,
                 translated_prompt, flags=re.IGNORECASE
             )
 
@@ -417,12 +425,14 @@ def compute_semantic_similarity(model, text1, text2):
         text2: second text
 
     Returns:
-        float: cosine similarity score
+        float: cosine similarity score (0.0 if either text produces zero-norm embedding)
     """
     embeddings = model.encode([text1, text2])
-    sim = np.dot(embeddings[0], embeddings[1]) / (
-        np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1])
-    )
+    norm1 = np.linalg.norm(embeddings[0])
+    norm2 = np.linalg.norm(embeddings[1])
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    sim = np.dot(embeddings[0], embeddings[1]) / (norm1 * norm2)
     return float(sim)
 
 
@@ -442,6 +452,10 @@ def deduplicate(seeds, threshold=0.85):
     """
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
+
+    if not seeds:
+        print("Deduplication: 0 seeds (empty input)")
+        return []
 
     prompts = [s["prompt"] for s in seeds]
     vectorizer = TfidfVectorizer()
@@ -467,15 +481,22 @@ def deduplicate(seeds, threshold=0.85):
 # ---------------------------------------------------------------------------
 # 9. Leetspeak / Obfuscation
 # ---------------------------------------------------------------------------
-def apply_leetspeak(text):
-    """Apply leetspeak-style obfuscation to text."""
+def apply_leetspeak(text, rng=None):
+    """Apply leetspeak-style obfuscation to text.
+
+    Args:
+        text: input text to obfuscate
+        rng: optional seeded random.Random instance for reproducibility
+    """
+    if rng is None:
+        rng = random
     leet_map = {
         'a': '@', 'e': '3', 'i': '1', 'o': '0',
         's': '$', 't': '7', 'l': '|', 'g': '9',
     }
     result = []
     for char in text:
-        if char.lower() in leet_map and random.random() > 0.5:
+        if char.lower() in leet_map and rng.random() > 0.5:
             result.append(leet_map[char.lower()])
         else:
             result.append(char)

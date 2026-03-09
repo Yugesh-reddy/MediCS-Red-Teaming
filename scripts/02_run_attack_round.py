@@ -31,10 +31,15 @@ from medics.utils import load_jsonl, save_jsonl, load_json, load_config
 
 def generate_attacks(config, round_num, attack_pool, keywords):
     """Phase 1: Generate attack prompts using Thompson Sampling."""
+    # Seed RNG for reproducible attack generation
+    rng_seed = config.get("defense", {}).get("sft", {}).get("training", {}).get("seed", 42)
+    rng = random.Random(rng_seed + round_num)  # vary by round
+
     curriculum = config.get("red_team", {}).get("curriculum")
     available = get_available_strategies(round_num, curriculum=curriculum)
     categories = config.get("categories", ["TOX", "SH", "MIS", "ULP", "PPV", "UCA"])
-    bandit = ThompsonBandit(arms=available, categories=categories)
+    bandit = ThompsonBandit(arms=available, categories=categories,
+                            seed=rng_seed + round_num)
 
     # Load previous round's bandit state if available
     prev_state = Path(f"results/attacks/round_{round_num - 1}/bandit_state.json")
@@ -57,14 +62,14 @@ def generate_attacks(config, round_num, attack_pool, keywords):
     n_attacks = config["red_team"].get("attacks_per_round", 150)
 
     for i in range(n_attacks):
-        seed = random.choice(attack_pool)
+        seed = rng.choice(attack_pool)
         min_pulls = config["red_team"].get("min_exploration_pulls", 10)
         strategy = bandit.select_with_exploration(
             category=seed.get("category"), min_pulls=min_pulls
         )
-        language = random.choice(languages)
+        language = rng.choice(languages)
 
-        attack = apply_strategy(seed, strategy, keywords, language)
+        attack = apply_strategy(seed, strategy, keywords, language, rng=rng)
         attack["round"] = round_num
         attacks.append(attack)
 

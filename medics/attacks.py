@@ -7,7 +7,7 @@ They transform prompts; inference happens separately.
 """
 
 import random
-from typing import Literal
+from typing import Literal, Optional
 
 from medics.utils import code_switch_prompt, apply_leetspeak
 from medics.judge import generate_mte_turns
@@ -47,7 +47,8 @@ ROLEPLAY_TEMPLATES = [
 # Strategy Application
 # ---------------------------------------------------------------------------
 def apply_strategy(seed: dict, strategy: Strategy,
-                   keywords: dict, language: str) -> dict:
+                   keywords: dict, language: str,
+                   rng: Optional[random.Random] = None) -> dict:
     """
     Apply an attack strategy to a seed prompt.
     Returns the transformed attack prompt ready for inference.
@@ -57,17 +58,21 @@ def apply_strategy(seed: dict, strategy: Strategy,
         strategy: one of "CS", "RP", "MTE", "CS-RP", "CS-OBF"
         keywords: dict mapping seed_id -> keyword list
         language: target language code
+        rng: optional seeded Random instance for reproducibility
 
     Returns:
         dict with 'attack_prompt', 'strategy', 'language', and original seed fields
     """
+    if rng is None:
+        rng = random
+
     prompt = seed["prompt"]
 
     if strategy == "CS":
         return code_switch_prompt(seed, keywords, language)
 
     elif strategy == "RP":
-        template = random.choice(ROLEPLAY_TEMPLATES)
+        template = rng.choice(ROLEPLAY_TEMPLATES)
         return {
             "attack_prompt": template.format(prompt=prompt),
             "original_prompt": prompt,
@@ -80,7 +85,11 @@ def apply_strategy(seed: dict, strategy: Strategy,
     elif strategy == "MTE":
         # Multi-turn: 3-turn escalation (requires GPT-4o call)
         turns = generate_mte_turns(prompt)
-        # For MTE, the attack_prompt is the full turn sequence as a string
+        # Detect fallback: if only 1 turn returned matching the raw prompt,
+        # mark it so per-strategy analysis can filter it
+        is_fallback = (
+            len(turns) == 1 and turns[0].get("content", "").strip() == prompt.strip()
+        )
         turn_text = "\n".join([f"[Turn {i+1}]: {t['content']}" for i, t in enumerate(turns)])
         return {
             "attack_prompt": turn_text,
@@ -88,6 +97,8 @@ def apply_strategy(seed: dict, strategy: Strategy,
             "original_prompt": prompt,
             "strategy": "MTE",
             "is_multi_turn": True,
+            "mte_fallback": is_fallback,
+            "n_turns": len(turns),
             "language": "en",
             "seed_id": seed.get("seed_id", ""),
             "category": seed.get("category", ""),
@@ -95,7 +106,7 @@ def apply_strategy(seed: dict, strategy: Strategy,
 
     elif strategy == "CS-RP":
         cs = code_switch_prompt(seed, keywords, language)
-        template = random.choice(ROLEPLAY_TEMPLATES)
+        template = rng.choice(ROLEPLAY_TEMPLATES)
         return {
             "attack_prompt": template.format(prompt=cs["attack_prompt"]),
             "original_prompt": prompt,
@@ -107,7 +118,7 @@ def apply_strategy(seed: dict, strategy: Strategy,
 
     elif strategy == "CS-OBF":
         cs = code_switch_prompt(seed, keywords, language)
-        obfuscated = apply_leetspeak(cs["attack_prompt"])
+        obfuscated = apply_leetspeak(cs["attack_prompt"], rng=rng)
         return {
             "attack_prompt": obfuscated,
             "original_prompt": prompt,
