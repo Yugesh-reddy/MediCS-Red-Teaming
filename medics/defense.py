@@ -6,8 +6,14 @@ Pure functions — no GPU, no model loading.
 Training scripts that use these live in colab/train_sft.py and colab/train_dpo.py.
 """
 
+import hashlib
 import random
 from medics.judge import generate_refusal_batch, generate_helpful_batch
+
+
+def _stable_hash(text):
+    """Deterministic hash for deduplication (unlike hash(), stable across sessions)."""
+    return hashlib.md5(text.encode("utf-8", errors="replace")).hexdigest()
 
 
 MEDICAL_SYSTEM_PROMPT = """You are a medical AI assistant. You provide accurate, \
@@ -22,23 +28,27 @@ def _get_benign_prompt(bt):
     return bt.get("prompt", bt.get("benign_question", ""))
 
 
-def build_sft_data(jailbreaks, benign_twins):
+def build_sft_data(jailbreaks, benign_twins, rng_seed=42):
     """
     Build balanced SFT training data.
 
     Refusal examples: jailbreak prompt → GPT-4o refusal
     Helpful examples: benign twin → GPT-4o helpful response
     Enforced 1:1 ratio to prevent over-refusal.
+    Helpful examples are randomly sampled (not first-N) to avoid ordering bias.
 
     Args:
         jailbreaks: list of dicts with 'attack_prompt' and other fields
         benign_twins: list of dicts with 'prompt' and 'category'
+        rng_seed: random seed for reproducible sampling and shuffling
 
     Returns:
         tuple:
           - list of SFT training examples with 'messages', 'type', 'category'
           - dict mapping seed_id -> refusal text for later DPO reuse
     """
+    rng = random.Random(rng_seed)
+
     # Generate refusals for jailbreaks (GPT-4o API call)
     refusals = generate_refusal_batch(
         [jb["attack_prompt"] for jb in jailbreaks]
@@ -82,10 +92,16 @@ def build_sft_data(jailbreaks, benign_twins):
         if sid:
             refusal_map[sid] = refusal
 
-    # Balance 1:1
+    # Balance 1:1 — randomly sample helpful examples (not first-N)
     min_count = min(len(refusal_examples), len(helpful_examples))
-    balanced = refusal_examples[:min_count] + helpful_examples[:min_count]
-    random.shuffle(balanced)
+    if len(helpful_examples) > min_count:
+        helpful_examples = rng.sample(helpful_examples, min_count)
+    else:
+        helpful_examples = helpful_examples[:min_count]
+    refusal_examples = refusal_examples[:min_count]
+
+    balanced = refusal_examples + helpful_examples
+    rng.shuffle(balanced)
 
     print(f"SFT data: {len(balanced)} examples "
           f"({min_count} refusals + {min_count} helpful)")
@@ -97,6 +113,7 @@ def build_dpo_pairs(
     refusals,
     benign_eval_results,
     generate_missing_helpful=True,
+    deduplicate=True,
 ):
     """
     Build DPO preference pairs from EXISTING data. $0 additional API.
@@ -109,11 +126,16 @@ def build_dpo_pairs(
                     'seed_id', 'category', 'strategy', 'language'
         refusals: dict mapping seed_id -> refusal text
         benign_eval_results: list of dicts with benign eval results
+        generate_missing_helpful: if True, generate helpful responses via API
+                                  (set False in pipeline to maintain $0 guarantee)
+        deduplicate: if True, deduplicate pairs by prompt hash to avoid
+                     duplicate training examples from same seed across rounds
 
     Returns:
         list of DPO pair dicts with 'prompt', 'chosen', 'rejected', 'type'
     """
     pairs = []
+    seen_prompts = set()
 
     # Type 1: Attack pairs (chosen=safe refusal, rejected=harmful response)
     for jb in jailbreaks:
@@ -123,6 +145,12 @@ def build_dpo_pairs(
         chosen_refusal = refusals.get(seed_id, "")
 
         if chosen_refusal and attack_prompt and model_response:
+            # Deduplicate by prompt content (same seed across rounds)
+            prompt_key = _stable_hash(attack_prompt) if deduplicate else id(jb)
+            if prompt_key in seen_prompts:
+                continue
+            seen_prompts.add(prompt_key)
+
             pairs.append({
                 "prompt": attack_prompt,
                 "chosen": chosen_refusal,
@@ -133,11 +161,11 @@ def build_dpo_pairs(
                 "language": jb.get("language", ""),
             })
 
+    n_skipped = 0
+
     # Type 2: Over-refusal correction pairs
     overrefused = [r for r in benign_eval_results if r.get("was_incorrectly_refused")]
     if overrefused:
-        # Generate expected helpful responses for entries that lack them.
-        # Keep this optional because DPO build is intended to be a $0 API step.
         needs_gen = [r for r in overrefused if not r.get("expected_helpful_response")]
         if generate_missing_helpful and needs_gen:
             prompts = [
@@ -153,6 +181,13 @@ def build_dpo_pairs(
             rejected = result.get("model_refusal", result.get("model_response", ""))
             if not prompt or not chosen or not rejected:
                 continue
+
+            prompt_key = _stable_hash(prompt) if deduplicate else id(result)
+            if prompt_key in seen_prompts:
+                n_skipped += 1
+                continue
+            seen_prompts.add(prompt_key)
+
             pairs.append({
                 "prompt": prompt,
                 "chosen": chosen,
@@ -161,7 +196,13 @@ def build_dpo_pairs(
                 "category": result.get("category", ""),
             })
 
+    n_attack = sum(1 for p in pairs if p["type"] == "attack_pair")
+    n_overrefusal = sum(1 for p in pairs if p["type"] == "overrefusal_correction")
     print(f"DPO pairs: {len(pairs)} "
-          f"({sum(1 for p in pairs if p['type'] == 'attack_pair')} attack, "
-          f"{sum(1 for p in pairs if p['type'] == 'overrefusal_correction')} over-refusal)")
+          f"({n_attack} attack, {n_overrefusal} over-refusal)")
+    if deduplicate and n_skipped:
+        print(f"  Deduplicated: skipped {n_skipped} duplicate prompts")
+    if n_overrefusal == 0:
+        print(f"  WARNING: 0 over-refusal correction pairs. "
+              f"DPO may not correct over-refusal without these.")
     return pairs
