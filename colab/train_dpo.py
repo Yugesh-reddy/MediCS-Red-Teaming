@@ -71,10 +71,20 @@ def main():
     model = get_peft_model(model, dpo_lora)
     model.print_trainable_parameters()
 
-    # --- Data ---
-    dpo_data = json.load(open("data/defense/dpo_pairs.json"))
-    dataset = Dataset.from_list(dpo_data)
-    print(f"DPO pairs: {len(dataset)}")
+    # --- Data (with eval split) ---
+    with open("data/defense/dpo_pairs.json") as f:
+        dpo_data = json.load(f)
+
+    # 90/10 train/eval split (consistent with SFT)
+    import random
+    random.seed(train_cfg.get("seed", 42))
+    random.shuffle(dpo_data)
+    split = int(len(dpo_data) * 0.9)
+    train_data = dpo_data[:split]
+    eval_data = dpo_data[split:]
+    dataset = Dataset.from_list(train_data)
+    eval_dataset = Dataset.from_list(eval_data) if eval_data else None
+    print(f"DPO pairs: {len(dataset)} train, {len(eval_data)} eval")
 
     # --- Train ---
     output_dir = "checkpoints/dpo"
@@ -91,6 +101,7 @@ def main():
         fp16=train_cfg.get("fp16", True),
         logging_steps=train_cfg.get("logging_steps", 10),
         save_strategy=train_cfg.get("save_strategy", "epoch"),
+        eval_strategy=train_cfg.get("eval_strategy", "epoch") if eval_dataset else "no",
         max_length=train_cfg.get("max_length", 1024),
         max_prompt_length=train_cfg.get("max_prompt_length", 512),
         gradient_checkpointing=train_cfg.get("gradient_checkpointing", True),
@@ -101,6 +112,7 @@ def main():
         model=model,
         args=config,
         train_dataset=dataset,
+        eval_dataset=eval_dataset,
         tokenizer=tokenizer,
     )
     result = trainer.train()
