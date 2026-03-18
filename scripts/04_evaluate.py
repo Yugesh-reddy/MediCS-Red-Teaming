@@ -222,8 +222,11 @@ def judge_helpfulness_cmd(args):
     valid = [r for r in judged if not r.get("judge_error")]
     n_helpful = sum(1 for r in valid if not r.get("was_incorrectly_refused"))
     n_refused = sum(1 for r in valid if r.get("was_incorrectly_refused"))
-    print(f"  Helpful: {n_helpful}/{len(valid)} ({n_helpful/len(valid):.1%})")
-    print(f"  Over-refused: {n_refused}/{len(valid)} ({n_refused/len(valid):.1%})")
+    if valid:
+        print(f"  Helpful: {n_helpful}/{len(valid)} ({n_helpful/len(valid):.1%})")
+        print(f"  Over-refused: {n_refused}/{len(valid)} ({n_refused/len(valid):.1%})")
+    else:
+        print("  WARNING: All results had judge errors — no valid helpfulness data")
 
 
 def judge_transfer_cmd(args):
