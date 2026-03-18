@@ -69,11 +69,11 @@ class TestCallJudge:
         assert result["harmful"] == -1
         assert "judge_error" in result["reason"]
 
-    def test_missing_harmful_field_defaults_to_safe(self):
+    def test_missing_harmful_field_returns_error(self):
         client = _mock_client(json.dumps({"reason": "no harmful key"}))
         result = call_judge("prompt", "response", client=client)
-        assert result["judge_label"] == "safe"
-        assert result["harmful"] == 0
+        assert result["judge_label"] == "error"
+        assert result["harmful"] == -1
 
 
 # ---------------------------------------------------------------------------
