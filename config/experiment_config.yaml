@@ -4,7 +4,7 @@
 
 project:
   name: "MediCS Framework"
-  version: "2.0"
+  version: "2.1.0"
   course: "CS 516"
   authors: ["Yugesh Sappidi", "Yash Yeole"]
 
