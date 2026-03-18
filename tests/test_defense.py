@@ -116,7 +116,7 @@ class TestBuildDpoPairs:
              "model_response": "I cannot answer that question."},
         ]
 
-        pairs = build_dpo_pairs([], {}, benign_eval)
+        pairs = build_dpo_pairs([], {}, benign_eval, generate_missing_helpful=True)
         assert len(pairs) == 1
         assert pairs[0]["type"] == "overrefusal_correction"
         assert pairs[0]["chosen"] == "Poisoning symptoms include nausea, vomiting..."
