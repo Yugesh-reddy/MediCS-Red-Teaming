@@ -130,6 +130,11 @@ def main(config_path, skip_seeds=False, verify_only=False):
     save_jsonl(verified, data_dir / "medics_500/medics_500_full.jsonl")
     print(f"\nVerified variants: {len(verified)}/{len(variants)}")
 
+    if not verified:
+        print("ERROR: No variants passed semantic verification. "
+              "Check translation quality or lower the threshold.")
+        sys.exit(1)
+
     # --- Step 6: Stratified split ---
     print("\n--- Step 6: Creating stratified splits ---")
     strat_keys = [f"{v['category']}_{v['language']}" for v in verified]

@@ -27,6 +27,14 @@ sns.set_palette("husl")
 FIGSIZE = (10, 6)
 
 
+def _find_held_out(results_dir, ckpt, filename="held_out.jsonl"):
+    """Find results file, preferring multi-seed path (seed_42), then single path."""
+    seed_path = Path(results_dir) / ckpt / "seed_42" / filename
+    single_path = Path(results_dir) / ckpt / filename
+    path = seed_path if seed_path.exists() else single_path
+    return load_jsonl(str(path))
+
+
 def fig1_asr_defense_stages(results_dir, figures_dir):
     """ASR Across Defense Stages — the money shot."""
     checkpoints = ["base", "sft", "dpo"]
@@ -36,7 +44,7 @@ def fig1_asr_defense_stages(results_dir, figures_dir):
     asrs = []
     cis = []
     for ckpt in checkpoints:
-        results = load_jsonl(f"{results_dir}/{ckpt}/held_out.jsonl")
+        results = _find_held_out(results_dir, ckpt)
         if results:
             valid = [r for r in results if r.get("judge_label") != "error"]
             asr_vals = [1 if r.get("judge_label") == "harmful" else 0 for r in valid]
@@ -76,7 +84,7 @@ def fig1_asr_defense_stages(results_dir, figures_dir):
 
 def fig2_strategy_heatmap(results_dir, figures_dir):
     """Strategy Effectiveness Heatmap (categories x strategies)."""
-    results = load_jsonl(f"{results_dir}/base/held_out.jsonl")
+    results = _find_held_out(results_dir, "base")
     if not results:
         print("  Figure 2: No base results")
         return
@@ -114,7 +122,7 @@ def fig3_cross_language(results_dir, figures_dir):
 
     all_data = []
     for ckpt, label in zip(checkpoints, stage_labels):
-        results = load_jsonl(f"{results_dir}/{ckpt}/held_out.jsonl")
+        results = _find_held_out(results_dir, ckpt)
         if results:
             lang_asr = compute_per_language_asr(results)
             for lang, asr in lang_asr.items():
@@ -178,9 +186,9 @@ def fig4_thompson_convergence(figures_dir):
 
 def fig5_failure_modes(results_dir, figures_dir):
     """Failure Mode Distribution -- how attacks succeed."""
-    results = load_jsonl(f"{results_dir}/dpo/held_out.jsonl")
+    results = _find_held_out(results_dir, "dpo")
     if not results:
-        results = load_jsonl(f"{results_dir}/sft/held_out.jsonl")
+        results = _find_held_out(results_dir, "sft")
     if not results:
         print("  Figure 5: No results")
         return
@@ -216,8 +224,8 @@ def fig5_failure_modes(results_dir, figures_dir):
 
 def fig6_robustness_gain(results_dir, figures_dir):
     """Robustness Gain Summary (RG per category)."""
-    base_results = load_jsonl(f"{results_dir}/base/held_out.jsonl")
-    dpo_results = load_jsonl(f"{results_dir}/dpo/held_out.jsonl")
+    base_results = _find_held_out(results_dir, "base")
+    dpo_results = _find_held_out(results_dir, "dpo")
     if not base_results or not dpo_results:
         print("  Figure 6: Missing results")
         return
@@ -255,7 +263,7 @@ def fig7_overrefusal_correction(results_dir, figures_dir):
 
     hrs = []
     for ckpt in checkpoints:
-        benign = load_jsonl(f"{results_dir}/{ckpt}/benign_results.jsonl")
+        benign = _find_held_out(results_dir, ckpt, "benign_results.jsonl")
         if benign:
             valid = [r for r in benign if not r.get("judge_error")]
             helpful = sum(1 for r in valid if not r.get("was_incorrectly_refused"))
@@ -287,8 +295,7 @@ def fig7_overrefusal_correction(results_dir, figures_dir):
 def fig8_semantic_vs_asr(figures_dir):
     """Semantic Preservation vs ASR -- does translation quality predict attack success?"""
     scores = load_json("data/medics_500/semantic_scores.json")
-    results_path = "results/eval/base/held_out.jsonl"
-    results = load_jsonl(results_path)
+    results = _find_held_out("results/eval", "base")
 
     if not scores or not results:
         print("  Figure 8: Missing data")

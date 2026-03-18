@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 .DS_Store
 .research
-claude.md
+CLAUDE.md
+conference_gap_analysis.md

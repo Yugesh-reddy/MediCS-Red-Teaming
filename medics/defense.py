@@ -112,7 +112,7 @@ def build_dpo_pairs(
     jailbreaks,
     refusals,
     benign_eval_results,
-    generate_missing_helpful=True,
+    generate_missing_helpful=False,
     deduplicate=True,
 ):
     """
