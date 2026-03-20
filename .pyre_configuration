@@ -1,0 +1,13 @@
+{
+  "source_directories": ["."],
+  "search_path": ["."],
+  "strict": false,
+  "exclude": [
+    ".git/.*",
+    "checkpoints/.*",
+    "models/.*",
+    "data/.*",
+    "results/.*",
+    "figures/.*"
+  ]
+}

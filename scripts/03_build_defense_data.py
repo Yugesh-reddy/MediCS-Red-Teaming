@@ -14,8 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from medics.defense import build_sft_data, build_dpo_pairs
-from medics.utils import load_jsonl, save_json, load_json
+from medics.defense import build_sft_data, build_dpo_pairs  # pyre-ignore[21]
+from medics.utils import load_jsonl, save_json, load_json  # pyre-ignore[21]
 
 
 def main():
@@ -55,7 +55,7 @@ def main():
 
         # Save helpful targets for potential DPO over-refusal correction reuse
         helpful_targets = {}
-        for ex in sft_data:
+        for ex in sft_data:  # pyre-ignore[16]
             if ex.get("type") != "helpful":
                 continue
             messages = ex.get("messages", [])
@@ -82,9 +82,16 @@ def main():
                 [res for res in results if res.get("judge_label") == "harmful"]
             )
 
+            # Benign eval must be run after each SFT round:
+            #   colab/run_inference.py --checkpoint checkpoints/sft/round_{r}/final
+            #     --input data/seeds/benign_twins.jsonl
+            #     --output results/eval/sft/round_{r}/benign_results.jsonl
             benign_path = f"results/eval/sft/round_{r}/benign_results.jsonl"
             if Path(benign_path).exists():
                 all_benign_eval.extend(load_jsonl(benign_path))
+            else:
+                print(f"WARNING: Missing {benign_path} — run benign inference "
+                      f"after SFT round {r} for over-refusal correction pairs")
 
         refusals = load_json("data/defense/refusals.json")
         if refusals is None:
@@ -110,8 +117,8 @@ def main():
             if sid in bt_lookup and "benign_prompt" not in r:
                 r["benign_prompt"] = bt_lookup[sid]
             prompt = r.get("benign_prompt", r.get("prompt", ""))
-            if prompt and not r.get("expected_helpful_response") and prompt in helpful_targets:
-                r["expected_helpful_response"] = helpful_targets[prompt]
+            if prompt and not r.get("expected_helpful_response") and prompt in helpful_targets:  # pyre-ignore[58]
+                r["expected_helpful_response"] = helpful_targets[prompt]  # pyre-ignore[16]
 
         dpo_pairs = build_dpo_pairs(
             all_jailbreaks,

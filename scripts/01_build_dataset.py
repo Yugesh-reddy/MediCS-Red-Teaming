@@ -24,16 +24,16 @@ from pathlib import Path
 # Ensure project root is on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from medics.utils import (
+from medics.utils import (  # pyre-ignore[21]
     load_jsonl, load_seeds, save_jsonl, save_json, load_json, load_config,
     extract_keywords_batch, code_switch_prompt,
     back_translate, compute_semantic_similarity, deduplicate,
     flush_translation_cache,
 )
 
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sentence_transformers import SentenceTransformer
+import numpy as np  # pyre-ignore[21]
+from sklearn.model_selection import train_test_split  # pyre-ignore[21]
+from sentence_transformers import SentenceTransformer  # pyre-ignore[21]
 
 
 def main(config_path, skip_seeds=False, verify_only=False):
@@ -109,15 +109,15 @@ def main(config_path, skip_seeds=False, verify_only=False):
         lang = v["language"]
         if lang not in lang_stats:
             lang_stats[lang] = {"passed": 0, "total": 0, "scores": []}
-        lang_stats[lang]["total"] += 1
-        lang_stats[lang]["scores"].append(score)
+        lang_stats[lang]["total"] += 1  # pyre-ignore[58]
+        lang_stats[lang]["scores"].append(score)  # pyre-ignore[16]
         if score >= threshold:
-            lang_stats[lang]["passed"] += 1
+            lang_stats[lang]["passed"] += 1  # pyre-ignore[58]
 
     # Report per-language quality
     print("\nPer-language semantic preservation:")
     for lang, stats in sorted(lang_stats.items()):
-        rate = stats["passed"] / stats["total"]
+        rate = stats["passed"] / stats["total"]  # pyre-ignore[58]
         avg = np.mean(stats["scores"])
         print(f"  {lang:10s}: {rate:.1%} pass | avg: {avg:.3f} | "
               f"{stats['passed']}/{stats['total']}")
@@ -139,7 +139,8 @@ def main(config_path, skip_seeds=False, verify_only=False):
     print("\n--- Step 6: Creating stratified splits ---")
     strat_keys = [f"{v['category']}_{v['language']}" for v in verified]
     attack_pool, held_out = train_test_split(
-        verified, test_size=0.2, stratify=strat_keys, random_state=42
+        verified, test_size=0.2, stratify=strat_keys,
+        random_state=config["defense"]["sft"]["training"].get("seed", 42)
     )
 
     # Ensure output dirs exist
