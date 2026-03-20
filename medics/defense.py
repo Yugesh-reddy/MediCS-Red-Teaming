@@ -8,7 +8,7 @@ Training scripts that use these live in colab/train_sft.py and colab/train_dpo.p
 
 import hashlib
 import random
-from medics.judge import generate_refusal_batch, generate_helpful_batch
+from medics.judge import generate_refusal_batch, generate_helpful_batch  # pyre-ignore[21]
 
 
 def _stable_hash(text):
@@ -97,8 +97,8 @@ def build_sft_data(jailbreaks, benign_twins, rng_seed=42):
     if len(helpful_examples) > min_count:
         helpful_examples = rng.sample(helpful_examples, min_count)
     else:
-        helpful_examples = helpful_examples[:min_count]
-    refusal_examples = refusal_examples[:min_count]
+        helpful_examples = helpful_examples[:min_count]  # pyre-ignore[16]
+    refusal_examples = refusal_examples[:min_count]  # pyre-ignore[16]
 
     balanced = refusal_examples + helpful_examples
     rng.shuffle(balanced)
@@ -184,7 +184,7 @@ def build_dpo_pairs(
 
             prompt_key = _stable_hash(prompt) if deduplicate else id(result)
             if prompt_key in seen_prompts:
-                n_skipped += 1
+                n_skipped += 1  # pyre-ignore[58]
                 continue
             seen_prompts.add(prompt_key)
 
