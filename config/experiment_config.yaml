@@ -133,6 +133,7 @@ defense:
       loss_type: "sigmoid"
       fp16: true
       logging_steps: 10
+      eval_strategy: "epoch"
       save_strategy: "epoch"
       max_length: 1024
       max_prompt_length: 512
