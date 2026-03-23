@@ -154,6 +154,8 @@ def main(config_path, skip_seeds=False, verify_only=False):
 
 
 if __name__ == "__main__":
+    from medics.timing import timed_phase, save_timing_report
+
     parser = argparse.ArgumentParser(description="MediCS-500 dataset builder")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     parser.add_argument("--skip-seeds", action="store_true",
@@ -161,4 +163,6 @@ if __name__ == "__main__":
     parser.add_argument("--verify-only", action="store_true",
                         help="Only run verification step")
     args = parser.parse_args()
-    main(args.config, args.skip_seeds, args.verify_only)
+    with timed_phase("Dataset Construction"):
+        main(args.config, args.skip_seeds, args.verify_only)
+    save_timing_report()

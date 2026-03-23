@@ -174,4 +174,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from medics.timing import timed_phase, save_timing_report
+    with timed_phase("Inference", {"gpu": True}):
+        main()
+    save_timing_report()
