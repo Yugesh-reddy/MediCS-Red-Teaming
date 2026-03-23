@@ -136,4 +136,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from medics.timing import timed_phase, save_timing_report
+    # Phase name set inside main() based on --phase arg; wrap entire call
+    with timed_phase("Attack Round"):
+        main()
+    save_timing_report()

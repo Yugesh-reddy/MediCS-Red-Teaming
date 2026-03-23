@@ -170,34 +170,53 @@ def load_api_keys(config_path=None):
                     key, _, value = line.partition("=")
                     env_vars[key.strip()] = value.strip().strip('"').strip("'")
         keys = {
-            "openai_api_key": env_vars.get("OPENAI_API_KEY", ""),
+            "azure_openai_api_key": env_vars.get("AZURE_OPENAI_API_KEY", ""),
+            "azure_openai_endpoint": env_vars.get("AZURE_OPENAI_ENDPOINT", ""),
+            "azure_openai_api_version": env_vars.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+            "azure_openai_deployment": env_vars.get("AZURE_OPENAI_DEPLOYMENT", ""),
+            "azure_openai_deployment_mini": env_vars.get("AZURE_OPENAI_DEPLOYMENT_MINI", ""),
             "hf_token": env_vars.get("HF_TOKEN", ""),
         }
-        if keys["openai_api_key"]:
+        if keys["azure_openai_api_key"]:
             print("API keys loaded from .env file.")
             return keys
 
     # Method 3: Environment variables
-    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    azure_key = os.environ.get("AZURE_OPENAI_API_KEY", "")
     hf_token = os.environ.get("HF_TOKEN", "")
-    if openai_key:
+    if azure_key:
         print("API keys loaded from environment variables.")
-        return {"openai_api_key": openai_key, "hf_token": hf_token}
+        return {
+            "azure_openai_api_key": azure_key,
+            "azure_openai_endpoint": os.environ.get("AZURE_OPENAI_ENDPOINT", ""),
+            "azure_openai_api_version": os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+            "azure_openai_deployment": os.environ.get("AZURE_OPENAI_DEPLOYMENT", ""),
+            "azure_openai_deployment_mini": os.environ.get("AZURE_OPENAI_DEPLOYMENT_MINI", ""),
+            "hf_token": hf_token,
+        }
 
     raise FileNotFoundError(
         "No API keys found. Provide keys via one of:\n"
         f"  1. Encrypted file at {config_path}\n"
         f"  2. .env file at {dotenv_path}\n"
-        "  3. OPENAI_API_KEY / HF_TOKEN environment variables"
+        "  3. AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT environment variables"
     )
 
 
 def setup_api_clients(keys: dict):
-    """Set environment variables and return OpenAI client."""
-    os.environ["OPENAI_API_KEY"] = keys["openai_api_key"]
+    """Set environment variables and return Azure OpenAI client."""
+    os.environ["AZURE_OPENAI_API_KEY"] = keys.get("azure_openai_api_key", keys.get("openai_api_key", ""))
+    os.environ["AZURE_OPENAI_ENDPOINT"] = keys.get("azure_openai_endpoint", "")
+    os.environ["AZURE_OPENAI_API_VERSION"] = keys.get("azure_openai_api_version", "2024-12-01-preview")
+    os.environ["AZURE_OPENAI_DEPLOYMENT"] = keys.get("azure_openai_deployment", "")
+    os.environ["AZURE_OPENAI_DEPLOYMENT_MINI"] = keys.get("azure_openai_deployment_mini", "")
     os.environ["HF_TOKEN"] = keys.get("hf_token", "")
-    from openai import OpenAI
-    client = OpenAI(api_key=keys["openai_api_key"])
+    from openai import AzureOpenAI
+    client = AzureOpenAI(
+        api_key=os.environ["AZURE_OPENAI_API_KEY"],
+        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        api_version=os.environ["AZURE_OPENAI_API_VERSION"],
+    )
     return client
 
 
@@ -317,15 +336,19 @@ def extract_keywords_batch(seeds, model="gpt-4o-mini"):
     Returns:
         dict: {seed_id: [keyword1, keyword2, ...]}
     """
-    from openai import OpenAI
-    from medics.judge import track_external_usage
-    client = OpenAI()
+    from openai import AzureOpenAI
+    from medics.judge import track_external_usage, _get_deployment
+    client = AzureOpenAI(
+        api_key=os.environ["AZURE_OPENAI_API_KEY"],
+        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+    )
 
     keywords = {}
     for seed in tqdm(seeds, desc="Extracting keywords"):
         try:
             response = client.chat.completions.create(
-                model=model,
+                model=_get_deployment(model),
                 messages=[
                     {"role": "system", "content": (
                         "Extract the 3-5 most sensitive medical/harmful keywords "

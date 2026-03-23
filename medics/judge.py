@@ -10,7 +10,7 @@ import os
 import time
 from datetime import datetime
 
-from openai import OpenAI
+from openai import AzureOpenAI
 from tqdm import tqdm
 
 
@@ -137,20 +137,40 @@ reminder to consult healthcare professionals for personal medical decisions."""
 
 
 # ---------------------------------------------------------------------------
-# Core Judge Functions
+# Azure OpenAI Configuration
 # ---------------------------------------------------------------------------
 _shared_client = None
 
 
-def _get_client():
-    """Get or create OpenAI client from environment. Reuses client across calls.
+def _get_deployment(model: str) -> str:
+    """Map model name to Azure deployment name from environment variables.
 
-    NOTE: If OPENAI_API_KEY changes mid-session (rare, mainly in notebooks),
-    call _shared_client = None to force re-creation.
+    Env vars:
+        AZURE_OPENAI_DEPLOYMENT      — deployment for gpt-4o
+        AZURE_OPENAI_DEPLOYMENT_MINI — deployment for gpt-4o-mini
+
+    Falls back to the model name itself if env vars are not set (e.g., in tests).
+    """
+    if "mini" in model:
+        return os.environ.get("AZURE_OPENAI_DEPLOYMENT_MINI", model)
+    return os.environ.get("AZURE_OPENAI_DEPLOYMENT", model)
+
+
+def _get_client():
+    """Get or create Azure OpenAI client from environment. Reuses across calls.
+
+    Required env vars:
+        AZURE_OPENAI_API_KEY
+        AZURE_OPENAI_ENDPOINT
+        AZURE_OPENAI_API_VERSION
     """
     global _shared_client
     if _shared_client is None:
-        _shared_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        _shared_client = AzureOpenAI(
+            api_key=os.environ["AZURE_OPENAI_API_KEY"],
+            azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+            api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+        )
     return _shared_client
 
 
@@ -193,7 +213,7 @@ def call_judge(original_intent: str, model_response: str,
     try:
         def _call():
             return client.chat.completions.create(
-                model=model,
+                model=_get_deployment(model),
                 messages=[
                     {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
                     {"role": "user", "content": (
@@ -266,7 +286,7 @@ def judge_helpfulness(question: str, model_response: str,
     try:
         def _call():
             return client.chat.completions.create(
-                model=model,
+                model=_get_deployment(model),
                 messages=[
                     {"role": "system", "content": HELPFULNESS_JUDGE_PROMPT},
                     {"role": "user", "content": (
@@ -359,7 +379,7 @@ def generate_refusal_batch(attack_prompts, client=None, model="gpt-4o"):
         try:
             def _call(p=prompt):
                 return client.chat.completions.create(
-                    model=model,
+                    model=_get_deployment(model),
                     messages=[
                         {"role": "system", "content": REFUSAL_GENERATION_PROMPT},
                         {"role": "user", "content": p},
@@ -399,7 +419,7 @@ def generate_helpful_batch(benign_prompts, client=None, model="gpt-4o"):
         try:
             def _call(p=prompt):
                 return client.chat.completions.create(
-                    model=model,
+                    model=_get_deployment(model),
                     messages=[
                         {"role": "system", "content": HELPFUL_GENERATION_PROMPT},
                         {"role": "user", "content": p},
@@ -450,7 +470,7 @@ Return ONLY a JSON array of objects with "turn" (int) and "content" (str) keys."
     try:
         def _call():
             return client.chat.completions.create(
-                model=model,
+                model=_get_deployment(model),
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": f"Harmful intent: {harmful_prompt}"},
