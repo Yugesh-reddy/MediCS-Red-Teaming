@@ -25,6 +25,7 @@ import numpy as np
 from medics.metrics import (
     compute_all_metrics, mcnemar_test,
     compute_per_category_asr, compute_per_strategy_asr, compute_per_language_asr,
+    compute_effect_sizes, compute_residual_failure_breakdown,
 )
 from medics.judge import judge_response_batch, judge_helpfulness_batch
 from medics.utils import load_jsonl, save_jsonl, save_json
@@ -191,6 +192,15 @@ def evaluate_checkpoints(checkpoints, seeds):
             sig = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else 'ns'
             print(f"McNemar's p-value (base vs SFT): {p:.4f} {sig}")
 
+    # Effect sizes (Cohen's h) for all checkpoint pairs
+    asr_dict = {ckpt: data["asr_mean"] for ckpt, data in all_results.items()}
+    if len(asr_dict) >= 2:
+        effect_sizes = compute_effect_sizes(asr_dict)
+        print(f"\nEffect Sizes (Cohen's h):")
+        for pair, es in effect_sizes.items():
+            print(f"  {pair}: h={es['cohens_h']:.3f} ({es['interpretation']})")
+        all_results["effect_sizes"] = effect_sizes
+
     # Save summary
     Path("results/eval").mkdir(parents=True, exist_ok=True)
     save_json(all_results, "results/eval/summary.json")
@@ -248,10 +258,64 @@ def judge_transfer_cmd(args):
     print(f"Transfer ASR: {asr:.1%}")
 
 
+def residual_analysis_cmd(args):
+    """Analyze residual failures in the DPO (or specified) checkpoint."""
+    checkpoint = args.checkpoint or "dpo"
+    seed = int(args.seeds.split(",")[0]) if args.seeds else 42
+
+    results_path = _find_results_path(checkpoint, seed, "held_out.jsonl")
+    results = load_jsonl(results_path)
+    if not results:
+        print(f"ERROR: No results at {results_path}")
+        return
+
+    print(f"\nResidual Failure Analysis: {checkpoint} (seed={seed})")
+    print(f"{'='*60}")
+
+    breakdown = compute_residual_failure_breakdown(results)
+
+    print(f"  Total valid: {breakdown['total_valid']}")
+    print(f"  Total failures: {breakdown['total_failures']}")
+    print(f"  Residual ASR: {breakdown['residual_asr']:.1%}")
+
+    if breakdown.get("by_category"):
+        print(f"\n  By Category:")
+        for cat, info in sorted(breakdown["by_category"].items(),
+                                key=lambda x: x[1]["asr"], reverse=True):
+            print(f"    {cat}: ASR={info['asr']:.1%} "
+                  f"({info['count']}/{info['total']})")
+
+    if breakdown.get("by_language"):
+        print(f"\n  By Language:")
+        for lang, info in sorted(breakdown["by_language"].items(),
+                                 key=lambda x: x[1]["asr"], reverse=True):
+            print(f"    {lang}: ASR={info['asr']:.1%} "
+                  f"({info['count']}/{info['total']})")
+
+    if breakdown.get("by_strategy"):
+        print(f"\n  By Strategy:")
+        for strat, info in sorted(breakdown["by_strategy"].items(),
+                                  key=lambda x: x[1]["asr"], reverse=True):
+            print(f"    {strat}: ASR={info['asr']:.1%} "
+                  f"({info['count']}/{info['total']})")
+
+    if breakdown.get("hardest_pairs"):
+        print(f"\n  Hardest (Category, Language) Pairs:")
+        for pair in breakdown["hardest_pairs"][:10]:
+            print(f"    ({pair['category']}, {pair['language']}): "
+                  f"ASR={pair['asr']:.1%} ({pair['count']}/{pair['total']})")
+
+    # Save
+    Path("results/eval").mkdir(parents=True, exist_ok=True)
+    save_json(breakdown, "results/eval/residual_analysis.json")
+    print(f"\nSaved to results/eval/residual_analysis.json")
+
+
 def main():
     parser = argparse.ArgumentParser(description="MediCS evaluation pipeline")
     parser.add_argument("--checkpoints", default="base,sft,dpo",
                         help="Comma-separated checkpoint names")
+    parser.add_argument("--checkpoint", help="Single checkpoint for residual analysis")
     parser.add_argument("--seeds", default="42,123,456",
                         help="Comma-separated random seeds")
     # Helpfulness judging mode
@@ -260,6 +324,9 @@ def main():
     # Transfer judging mode
     parser.add_argument("--judge-transfer", action="store_true",
                         help="Run GPT-4o safety judging on transfer results")
+    # Residual failure analysis mode
+    parser.add_argument("--residual-analysis", action="store_true",
+                        help="Analyze residual failures after defense")
     parser.add_argument("--input", help="Input JSONL for judging modes")
     parser.add_argument("--output", help="Output JSONL for judging modes")
     args = parser.parse_args()
@@ -274,6 +341,8 @@ def main():
             print("ERROR: --input required for --judge-transfer")
             return
         judge_transfer_cmd(args)
+    elif args.residual_analysis:
+        residual_analysis_cmd(args)
     else:
         checkpoints = args.checkpoints.split(",")
         seeds = [int(s) for s in args.seeds.split(",")]
@@ -281,4 +350,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from medics.timing import timed_phase, save_timing_report
+    with timed_phase("Evaluation"):
+        main()
+    save_timing_report()
