@@ -31,12 +31,11 @@ from medics.utils import (  # pyre-ignore[21]
     flush_translation_cache,
 )
 
-import numpy as np  # pyre-ignore[21]
-from sklearn.model_selection import train_test_split  # pyre-ignore[21]
-from sentence_transformers import SentenceTransformer  # pyre-ignore[21]
-
-
 def main(config_path, skip_seeds=False, verify_only=False):
+    import numpy as np  # pyre-ignore[21]
+    from sklearn.model_selection import train_test_split  # pyre-ignore[21]
+    from sentence_transformers import SentenceTransformer  # pyre-ignore[21]
+
     config = load_config(config_path)
     data_dir = Path(config.get("data_dir", "data"))
 
