@@ -35,7 +35,7 @@ CATEGORY_MODELS = {
     "TOX": "GPT-5.2",
     "SH":  "GPT-5.2",
     "MIS": "Claude Opus 4.6",
-    "ULP": "GPT-5.2",
+    "ULP": "Gemini 3.1 Pro",
     "PPV": "Gemini 3.1 Pro",
     "UCA": "Claude Opus 4.6",
 }
