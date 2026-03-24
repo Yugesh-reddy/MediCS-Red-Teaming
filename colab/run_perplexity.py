@@ -47,21 +47,29 @@ def main():
     cfg = load_config(args.config)
     model_id = cfg["target_model"]["model_id"]
 
+    checkpoint = args.checkpoint
+
     print(f"=== Perplexity Detection Baseline ===")
     print(f"Model: {model_id}")
+    print(f"Checkpoint: {checkpoint}")
     print(f"CS input: {args.input}")
     print(f"EN input: {args.english_input}")
 
-    # Load model (4-bit quantized)
+    # Load model (config-driven quantization, matches run_inference.py)
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
+        bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
     model = AutoModelForCausalLM.from_pretrained(
         model_id, quantization_config=bnb_config, device_map="auto",
     )
+    if checkpoint != "base":
+        from peft import PeftModel
+        print(f"Loading adapter: {checkpoint}")
+        model = PeftModel.from_pretrained(model, checkpoint)
+
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -73,7 +81,7 @@ def main():
 
     # Extract text
     cs_texts = [d.get("attack_prompt", d.get("prompt", "")) for d in cs_data]
-    en_texts = [d.get("prompt", "") for d in en_data]
+    en_texts = [d.get("original_en", d.get("prompt", "")) for d in en_data]
 
     # Compute perplexity
     print("\nComputing perplexity for code-switched inputs...")
