@@ -37,6 +37,8 @@ def get_session_usage() -> dict:
     """Return aggregated token usage and estimated cost for this session."""
     # Pricing per 1M tokens (March 2026)
     pricing = {
+        "gpt-5-chat": {"input": 1.25, "output": 10.00},
+        "gpt-5-mini": {"input": 0.25, "output": 2.00},
         "gpt-4o": {"input": 2.50, "output": 10.00},
         "gpt-4o-mini": {"input": 0.15, "output": 0.60},
     }
@@ -51,7 +53,7 @@ def get_session_usage() -> dict:
 
     total_cost = 0.0
     for model, t in totals.items():
-        p = pricing.get(model, pricing["gpt-4o"])
+        p = pricing.get(model, pricing["gpt-5-chat"])
         cost = (t["input_tokens"] / 1e6 * p["input"] +
                 t["output_tokens"] / 1e6 * p["output"])
         t["estimated_cost"] = round(cost, 4)
@@ -146,8 +148,8 @@ def _get_deployment(model: str) -> str:
     """Map model name to Azure deployment name from environment variables.
 
     Env vars:
-        AZURE_OPENAI_DEPLOYMENT      — deployment for gpt-4o
-        AZURE_OPENAI_DEPLOYMENT_MINI — deployment for gpt-4o-mini
+        AZURE_OPENAI_DEPLOYMENT      — deployment for gpt-5-chat
+        AZURE_OPENAI_DEPLOYMENT_MINI — deployment for gpt-5-mini
 
     Falls back to the model name itself if env vars are not set (e.g., in tests).
     """
@@ -194,7 +196,7 @@ def _api_call_with_retry(fn, max_retries=3):
 
 
 def call_judge(original_intent: str, model_response: str,
-               client=None, model="gpt-4o") -> dict:
+               client=None, model="gpt-5-chat") -> dict:
     """
     Judge whether a model response is harmful.
 
@@ -221,7 +223,7 @@ def call_judge(original_intent: str, model_response: str,
                         f"AI ASSISTANT RESPONSE:\n{model_response}"
                     )},
                 ],
-                temperature=0.0,
+                # GPT-5 models only support temperature=1 (default)
                 response_format={"type": "json_object"},
             )
         response = _api_call_with_retry(_call)
@@ -244,7 +246,7 @@ def call_judge(original_intent: str, model_response: str,
                 "judge_label": "error", "judge_error": True}
 
 
-def judge_response_batch(responses, client=None, model="gpt-4o"):
+def judge_response_batch(responses, client=None, model="gpt-5-chat"):
     """
     Judge a batch of responses.
 
@@ -272,7 +274,7 @@ def judge_response_batch(responses, client=None, model="gpt-4o"):
 
 
 def judge_helpfulness(question: str, model_response: str,
-                      client=None, model="gpt-4o") -> dict:
+                      client=None, model="gpt-5-chat") -> dict:
     """
     Judge whether a model response is helpful for a benign question.
     Used to measure Helpfulness Retention (HR).
@@ -294,7 +296,7 @@ def judge_helpfulness(question: str, model_response: str,
                         f"AI ASSISTANT RESPONSE:\n{model_response}"
                     )},
                 ],
-                temperature=0.0,
+                # GPT-5 models only support temperature=1 (default)
                 response_format={"type": "json_object"},
             )
         response = _api_call_with_retry(_call)
@@ -319,7 +321,7 @@ def judge_helpfulness(question: str, model_response: str,
                 "judge_label": "error"}
 
 
-def judge_helpfulness_batch(benign_results, client=None, model="gpt-4o"):
+def judge_helpfulness_batch(benign_results, client=None, model="gpt-5-chat"):
     """
     Judge a batch of benign evaluation results for helpfulness.
     Adds 'was_incorrectly_refused', 'helpful', 'judge_label', 'judge_error' fields.
@@ -347,7 +349,7 @@ def judge_helpfulness_batch(benign_results, client=None, model="gpt-4o"):
     return results
 
 
-def track_external_usage(input_tokens, output_tokens, task, model="gpt-4o-mini"):
+def track_external_usage(input_tokens, output_tokens, task, model="gpt-5-mini"):
     """Track API usage from calls made outside judge.py (e.g., keyword extraction)."""
     _api_call_log.append({
         "task": task,
@@ -361,7 +363,7 @@ def track_external_usage(input_tokens, output_tokens, task, model="gpt-4o-mini")
 # ---------------------------------------------------------------------------
 # Response Generation (for defense data)
 # ---------------------------------------------------------------------------
-def generate_refusal_batch(attack_prompts, client=None, model="gpt-4o"):
+def generate_refusal_batch(attack_prompts, client=None, model="gpt-5-chat"):
     """
     Generate safe refusal responses for harmful attack prompts.
 
@@ -384,7 +386,7 @@ def generate_refusal_batch(attack_prompts, client=None, model="gpt-4o"):
                         {"role": "system", "content": REFUSAL_GENERATION_PROMPT},
                         {"role": "user", "content": p},
                     ],
-                    temperature=0.3,
+                    # GPT-5 models only support temperature=1 (default)
                     max_tokens=300,
                 )
             response = _api_call_with_retry(_call)
@@ -401,7 +403,7 @@ def generate_refusal_batch(attack_prompts, client=None, model="gpt-4o"):
     return refusals
 
 
-def generate_helpful_batch(benign_prompts, client=None, model="gpt-4o"):
+def generate_helpful_batch(benign_prompts, client=None, model="gpt-5-chat"):
     """
     Generate helpful responses for benign medical questions.
 
@@ -424,7 +426,7 @@ def generate_helpful_batch(benign_prompts, client=None, model="gpt-4o"):
                         {"role": "system", "content": HELPFUL_GENERATION_PROMPT},
                         {"role": "user", "content": p},
                     ],
-                    temperature=0.3,
+                    # GPT-5 models only support temperature=1 (default)
                     max_tokens=500,
                 )
             response = _api_call_with_retry(_call)
@@ -443,7 +445,7 @@ def generate_helpful_batch(benign_prompts, client=None, model="gpt-4o"):
 # ---------------------------------------------------------------------------
 # Multi-Turn Escalation (MTE) Turn Generation
 # ---------------------------------------------------------------------------
-def generate_mte_turns(harmful_prompt, client=None, model="gpt-4o", n_turns=3):
+def generate_mte_turns(harmful_prompt, client=None, model="gpt-5-chat", n_turns=3):
     """
     Generate a multi-turn escalation sequence.
 
@@ -475,7 +477,7 @@ Return ONLY a JSON array of objects with "turn" (int) and "content" (str) keys."
                     {"role": "system", "content": system},
                     {"role": "user", "content": f"Harmful intent: {harmful_prompt}"},
                 ],
-                temperature=0.7,
+                # GPT-5 models only support temperature=1 (default)
                 response_format={"type": "json_object"},
             )
         response = _api_call_with_retry(_call)
