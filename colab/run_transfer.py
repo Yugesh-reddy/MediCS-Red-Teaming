@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
-from medics.utils import load_jsonl, save_jsonl, load_config
+from medics.utils import load_jsonl, save_jsonl, load_config, load_dotenv
 from medics.defense import MEDICAL_SYSTEM_PROMPT
 
 
@@ -36,6 +36,9 @@ def main():
                         help="Random seed for reproducible inference")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
+
+    # Load local .env if present (HF token, endpoints, etc.)
+    load_dotenv()
 
     # Set all random seeds for reproducibility
     set_seed(args.seed)
