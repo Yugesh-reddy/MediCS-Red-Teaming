@@ -92,6 +92,7 @@ def evaluate_checkpoints(checkpoints, seeds):
                 attack_results, benign_results, label=f"{ckpt}_seed{seed}",
                 bootstrap_seed=seed,
             )
+            metrics["_seed"] = seed
             seed_metrics.append(metrics)
 
         if not seed_metrics:
@@ -107,7 +108,7 @@ def evaluate_checkpoints(checkpoints, seeds):
             "label": ckpt,
             "asr_mean": float(np.mean(asr_values)),
             "asr_std": float(np.std(asr_values)) if len(asr_values) > 1 else 0.0,
-            "asr_per_seed": {str(s): m["asr"] for s, m in zip(seeds, seed_metrics)},
+            "asr_per_seed": {str(m["_seed"]): m["asr"] for m in seed_metrics},
             # NOTE: CI is from first seed's within-seed bootstrap, not pooled across seeds.
             # Cross-seed variance is captured by asr_std. For pooled CI, aggregate raw
             # results across seeds and bootstrap once — not implemented (marginal gain).
@@ -224,7 +225,7 @@ def judge_helpfulness_cmd(args):
     print(f"Judging helpfulness for {len(results)} benign results...")
     judged = judge_helpfulness_batch(results)
 
-    output = args.output or args.input.replace(".jsonl", "_judged.jsonl")
+    output = args.output or args.input
     save_jsonl(judged, output)
     print(f"Judged results saved: {output}")
 

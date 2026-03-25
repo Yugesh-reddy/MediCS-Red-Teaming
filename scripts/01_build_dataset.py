@@ -28,17 +28,20 @@ from medics.utils import (  # pyre-ignore[21]
     load_jsonl, load_seeds, save_jsonl, save_json, load_json, load_config,
     extract_keywords_batch, code_switch_prompt,
     back_translate, compute_semantic_similarity, deduplicate,
-    flush_translation_cache,
+    flush_translation_cache, load_api_keys, setup_api_clients,
 )
 
-import numpy as np  # pyre-ignore[21]
-from sklearn.model_selection import train_test_split  # pyre-ignore[21]
-from sentence_transformers import SentenceTransformer  # pyre-ignore[21]
-
-
 def main(config_path, skip_seeds=False, verify_only=False):
+    import numpy as np  # pyre-ignore[21]
+    from sklearn.model_selection import train_test_split  # pyre-ignore[21]
+    from sentence_transformers import SentenceTransformer  # pyre-ignore[21]
+
     config = load_config(config_path)
     data_dir = Path(config.get("data_dir", "data"))
+
+    # Load API keys from .env and set environment variables
+    keys = load_api_keys()
+    setup_api_clients(keys)
 
     # Get language codes from config
     languages = [lang["code"] for lang in config["dataset"]["languages"]]
@@ -63,7 +66,7 @@ def main(config_path, skip_seeds=False, verify_only=False):
     if not verify_only:
         print("\n--- Step 3: Extracting keywords ---")
         seeds = load_seeds(deduped_path) if deduped_path.exists() else load_seeds(data_dir / "seeds/raw_seeds.jsonl")
-        keywords = extract_keywords_batch(seeds, model="gpt-4o-mini")
+        keywords = extract_keywords_batch(seeds, model="gpt-5-mini")
         save_json(keywords, data_dir / "seeds/keywords_checkpoint.json")
         print(f"Extracted keywords for {len(keywords)} seeds")
 

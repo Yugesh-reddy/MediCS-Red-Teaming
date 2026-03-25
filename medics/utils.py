@@ -322,11 +322,11 @@ def flush_translation_cache():
 
 
 # ---------------------------------------------------------------------------
-# 5. Keyword Extraction (GPT-4o-mini)
+# 5. Keyword Extraction (GPT-5-mini)
 # ---------------------------------------------------------------------------
-def extract_keywords_batch(seeds, model="gpt-4o-mini"):
+def extract_keywords_batch(seeds, model="gpt-5-mini"):
     """
-    Extract sensitive medical keywords from seed prompts using GPT-4o-mini.
+    Extract sensitive medical keywords from seed prompts using GPT-5-mini.
     Tracks API usage via judge.track_external_usage for cost accounting.
 
     Args:
@@ -356,7 +356,6 @@ def extract_keywords_batch(seeds, model="gpt-4o-mini"):
                     )},
                     {"role": "user", "content": seed["prompt"]},
                 ],
-                temperature=0.0,
                 response_format={"type": "json_object"},
             )
             # Track cost via judge module
