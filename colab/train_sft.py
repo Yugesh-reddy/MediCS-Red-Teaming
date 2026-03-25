@@ -21,7 +21,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, TaskType, PeftModel
 from trl import SFTTrainer, SFTConfig
 
-from medics.utils import load_config
+from medics.utils import load_config, load_dotenv
 
 
 def main():
@@ -33,6 +33,9 @@ def main():
                         help="Resume from previous round's adapter")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
+
+    # Load local .env if present (HF token, endpoints, etc.)
+    load_dotenv()
 
     cfg = load_config(args.config)
     model_id = args.model or cfg["target_model"]["model_id"]

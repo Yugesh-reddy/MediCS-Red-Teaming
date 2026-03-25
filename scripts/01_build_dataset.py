@@ -18,13 +18,19 @@ Steps:
 """
 
 import argparse
+import signal
 import sys
 from pathlib import Path
+
+# Ignore SIGURG — macOS sends this during concurrent HTTP connections
+# and default handler kills the process
+if hasattr(signal, "SIGURG"):
+    signal.signal(signal.SIGURG, signal.SIG_IGN)
 
 # Ensure project root is on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from medics.utils import (  # pyre-ignore[21]
+from medics.utils import (  
     load_jsonl, load_seeds, save_jsonl, save_json, load_json, load_config,
     extract_keywords_batch, code_switch_prompt,
     back_translate, compute_semantic_similarity, deduplicate,
@@ -32,9 +38,11 @@ from medics.utils import (  # pyre-ignore[21]
 )
 
 def main(config_path, skip_seeds=False, verify_only=False):
-    import numpy as np  # pyre-ignore[21]
-    from sklearn.model_selection import train_test_split  # pyre-ignore[21]
-    from sentence_transformers import SentenceTransformer  # pyre-ignore[21]
+    import numpy as np
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from sklearn.model_selection import train_test_split
+    from sentence_transformers import SentenceTransformer
+    from tqdm import tqdm
 
     config = load_config(config_path)
     data_dir = Path(config.get("data_dir", "data"))
@@ -46,6 +54,8 @@ def main(config_path, skip_seeds=False, verify_only=False):
     # Get language codes from config
     languages = [lang["code"] for lang in config["dataset"]["languages"]]
     threshold = config["dataset"].get("semantic_threshold", 0.75)
+    cs_cfg = config["dataset"].get("code_switching", {})
+    bt_cfg = config["dataset"].get("back_translation", {})
 
     print(f"=== MediCS-500 Dataset Builder ===")
     print(f"Languages: {languages}")
@@ -66,8 +76,15 @@ def main(config_path, skip_seeds=False, verify_only=False):
     if not verify_only:
         print("\n--- Step 3: Extracting keywords ---")
         seeds = load_seeds(deduped_path) if deduped_path.exists() else load_seeds(data_dir / "seeds/raw_seeds.jsonl")
-        keywords = extract_keywords_batch(seeds, model="gpt-5-mini")
-        save_json(keywords, data_dir / "seeds/keywords_checkpoint.json")
+        kw_cfg = config["dataset"].get("keyword_extraction", {})
+        keywords = extract_keywords_batch(
+            seeds,
+            model="gpt-5-mini",
+            max_workers=kw_cfg.get("max_workers", 10),
+            checkpoint_interval=kw_cfg.get("checkpoint_interval", 50),
+            request_timeout=kw_cfg.get("request_timeout", 30),
+            checkpoint_path=str(data_dir / "seeds/keywords_checkpoint.json"),
+        )
         print(f"Extracted keywords for {len(keywords)} seeds")
 
     # --- Step 4: Code-switching (6 languages × N seeds = N*6 variants) ---
@@ -75,14 +92,22 @@ def main(config_path, skip_seeds=False, verify_only=False):
         print("\n--- Step 4: Code-switching ---")
         seeds = load_seeds(deduped_path) if deduped_path.exists() else load_seeds(data_dir / "seeds/raw_seeds.jsonl")
         keywords = load_json(data_dir / "seeds/keywords_checkpoint.json")
+
+        tasks = [(seed, lang) for seed in seeds for lang in languages]
+
+        def _cs_one(args):
+            seed, lang = args
+            return code_switch_prompt(seed, keywords, lang)
+
         variants = []
-        for seed in seeds:
-            for lang in languages:
-                variant = code_switch_prompt(
-                    seed, keywords, lang,
-                    cache_path=data_dir / "seeds/translation_cache.json"
-                )
-                variants.append(variant)
+        cs_workers = cs_cfg.get("max_workers", 10)
+        with ThreadPoolExecutor(max_workers=cs_workers) as executor:
+            futures = {executor.submit(_cs_one, t): t for t in tasks}
+            for future in tqdm(as_completed(futures), total=len(tasks), desc="Code-switching"):
+                variants.append(future.result())
+
+        # Sort by seed_id then language for deterministic output
+        variants.sort(key=lambda v: (v["seed_id"], v["language"]))
         save_jsonl(variants, data_dir / "medics_500/medics_500_full.jsonl")
         flush_translation_cache()
         print(f"Generated {len(variants)} code-switched variants")
@@ -92,11 +117,36 @@ def main(config_path, skip_seeds=False, verify_only=False):
     sim_model = SentenceTransformer('all-MiniLM-L6-v2')  # ~80MB, CPU
     variants = load_jsonl(data_dir / "medics_500/medics_500_full.jsonl")
 
+    # Parallel back-translation (I/O bound)
+    print("Back-translating variants...")
+    bt_workers = bt_cfg.get("max_workers", 30)
+    bt_google_attempts = bt_cfg.get("google_attempts", 2)
+    bt_mymemory_attempts = bt_cfg.get("mymemory_attempts", 1)
+
+    def _bt_one(item):
+        idx, v = item
+        bt = back_translate(
+            v["attack_prompt"],
+            v["language"],
+            max_google_attempts=bt_google_attempts,
+            max_mymemory_attempts=bt_mymemory_attempts,
+        )
+        return idx, bt
+
+    back_translations = [None] * len(variants)
+    with ThreadPoolExecutor(max_workers=bt_workers) as executor:
+        futures = {executor.submit(_bt_one, item): item[0] for item in enumerate(variants)}
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Back-translating"):
+            idx, bt = future.result()
+            back_translations[idx] = bt
+    flush_translation_cache()
+
+    # Sequential semantic similarity (CPU model)
+    print("Computing semantic similarity...")
     scores = []
     lang_stats = {}
 
-    for v in variants:
-        bt = back_translate(v["attack_prompt"], v["language"])
+    for v, bt in zip(variants, back_translations):
         score = compute_semantic_similarity(
             sim_model, v["original_prompt"], bt
         )
@@ -112,10 +162,10 @@ def main(config_path, skip_seeds=False, verify_only=False):
         lang = v["language"]
         if lang not in lang_stats:
             lang_stats[lang] = {"passed": 0, "total": 0, "scores": []}
-        lang_stats[lang]["total"] += 1  # pyre-ignore[58]
-        lang_stats[lang]["scores"].append(score)  # pyre-ignore[16]
+        lang_stats[lang]["total"] += 1
+        lang_stats[lang]["scores"].append(score)
         if score >= threshold:
-            lang_stats[lang]["passed"] += 1  # pyre-ignore[58]
+            lang_stats[lang]["passed"] += 1
 
     # Report per-language quality
     print("\nPer-language semantic preservation:")
