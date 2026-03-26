@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
 from medics.detection import compute_perplexity_batch, perplexity_detector, detection_by_language
-from medics.utils import load_jsonl, save_json, load_config
+from medics.utils import load_jsonl, save_json, load_config, load_dotenv
 
 
 def main():
@@ -38,6 +38,9 @@ def main():
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
+
+    # Load local .env if present (HF token, endpoints, etc.)
+    load_dotenv()
 
     set_seed(args.seed)
     torch.manual_seed(args.seed)

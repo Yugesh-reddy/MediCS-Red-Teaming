@@ -66,6 +66,37 @@ def load_config(path=None):
         return yaml.safe_load(f)
 
 
+def load_dotenv(path=None, override=False):
+    """
+    Load KEY=VALUE pairs from a .env file into os.environ.
+
+    Args:
+        path: optional .env path (defaults to PROJECT_ROOT/.env)
+        override: if True, overwrite existing environment variables
+
+    Returns:
+        dict of loaded key/value pairs
+    """
+    if path is None:
+        path = os.path.join(PROJECT_ROOT, ".env")
+    if not os.path.exists(path):
+        return {}
+
+    loaded = {}
+    with open(path, "r") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if override or key not in os.environ:
+                os.environ[key] = value
+            loaded[key] = os.environ.get(key, value)
+    return loaded
+
+
 # ---------------------------------------------------------------------------
 # 2. JSON / JSONL I/O
 # ---------------------------------------------------------------------------
@@ -225,6 +256,16 @@ def setup_api_clients(keys: dict):
 # ---------------------------------------------------------------------------
 _translation_cache = None
 _translation_cache_dirty = 0
+_translation_lock = None
+
+
+def _get_translation_lock():
+    """Lazy-init a threading lock for translation cache thread safety."""
+    global _translation_lock
+    if _translation_lock is None:
+        import threading
+        _translation_lock = threading.Lock()
+    return _translation_lock
 
 
 def _get_cache_path():
@@ -253,8 +294,13 @@ def _save_translation_cache():
     _translation_cache_dirty = 0
 
 
-def translate_with_fallback(text: str, source: str = "en",
-                            target: str = "hi") -> dict:
+def translate_with_fallback(
+    text: str,
+    source: str = "en",
+    target: str = "hi",
+    max_google_attempts: int = 5,
+    max_mymemory_attempts: int = 3,
+) -> dict:
     """
     Translate text with caching, retry, and multi-backend fallback.
 
@@ -263,12 +309,14 @@ def translate_with_fallback(text: str, source: str = "en",
     """
     global _translation_cache_dirty
 
+    lock = _get_translation_lock()
     cache = _load_translation_cache()
     cache_key = f"{text}||{source}||{target}"
 
-    if cache_key in cache:
-        return {"translation": cache[cache_key]["translation"],
-                "source": "cache"}
+    with lock:
+        if cache_key in cache:
+            return {"translation": cache[cache_key]["translation"],
+                    "source": "cache"}
 
     result = None
     source_used = None
@@ -276,7 +324,7 @@ def translate_with_fallback(text: str, source: str = "en",
     # Layer 1: Google Translate via deep-translator
     try:
         from deep_translator import GoogleTranslator
-        for attempt in range(5):
+        for attempt in range(max(1, int(max_google_attempts))):
             try:
                 result = GoogleTranslator(source=source, target=target).translate(text)
                 source_used = "deep-translator-google"
@@ -290,7 +338,7 @@ def translate_with_fallback(text: str, source: str = "en",
     if result is None:
         try:
             from deep_translator import MyMemoryTranslator
-            for attempt in range(3):
+            for attempt in range(max(1, int(max_mymemory_attempts))):
                 try:
                     result = MyMemoryTranslator(source=source, target=target).translate(text)
                     source_used = "deep-translator-mymemory"
@@ -306,12 +354,12 @@ def translate_with_fallback(text: str, source: str = "en",
         result = text
         source_used = "fallback-english"
 
-    # Cache the result
-    cache[cache_key] = {"translation": result, "source": source_used}
-    _translation_cache_dirty += 1
-
-    if _translation_cache_dirty >= 50:
-        _save_translation_cache()
+    # Cache the result (thread-safe)
+    with lock:
+        cache[cache_key] = {"translation": result, "source": source_used}
+        _translation_cache_dirty += 1
+        if _translation_cache_dirty >= 50:
+            _save_translation_cache()
 
     return {"translation": result, "source": source_used}
 
@@ -324,57 +372,185 @@ def flush_translation_cache():
 # ---------------------------------------------------------------------------
 # 5. Keyword Extraction (GPT-5-mini)
 # ---------------------------------------------------------------------------
-def extract_keywords_batch(seeds, model="gpt-5-mini"):
+def extract_keywords_batch(seeds, model="gpt-5-mini", max_workers=10,
+                           checkpoint_interval=50, request_timeout=30,
+                           checkpoint_path=None):
     """
     Extract sensitive medical keywords from seed prompts using GPT-5-mini.
-    Tracks API usage via judge.track_external_usage for cost accounting.
+    Uses parallel requests with rate-limit retry, request timeouts, and
+    partial checkpoints for crash recovery.
 
     Args:
         seeds: List of seed dicts with 'prompt' and 'seed_id' fields.
         model: OpenAI model to use.
+        max_workers: Number of parallel API requests (config-driven).
+        checkpoint_interval: Save partial results every N completions.
+        request_timeout: Per-request timeout in seconds.
+        checkpoint_path: Path to save/load partial keyword checkpoints.
 
     Returns:
         dict: {seed_id: [keyword1, keyword2, ...]}
     """
+    import time as _time
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from openai import AzureOpenAI
     from medics.judge import track_external_usage, _get_deployment
+
+    if checkpoint_path is None:
+        checkpoint_path = os.path.join(PROJECT_ROOT, "data", "seeds", "keywords_checkpoint.json")
+
+    # Resume from partial checkpoint if available
+    keywords = {}
+    if os.path.exists(checkpoint_path):
+        try:
+            with open(checkpoint_path) as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                keywords = loaded
+                if keywords:
+                    print(f"  Resuming from checkpoint: {len(keywords)} keywords already extracted")
+            else:
+                print(f"  WARNING: Checkpoint has wrong type ({type(loaded).__name__}), starting fresh")
+        except (json.JSONDecodeError, IOError):
+            keywords = {}
+
+    # Filter out seeds already extracted
+    remaining = [s for s in seeds if s["seed_id"] not in keywords]
+    if not remaining:
+        print(f"  All {len(seeds)} keywords already extracted (from checkpoint)")
+        return keywords
+
+    print(f"  Extracting keywords for {len(remaining)} seeds ({len(keywords)} cached, {max_workers} workers)")
+
     client = AzureOpenAI(
         api_key=os.environ["AZURE_OPENAI_API_KEY"],
         azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
         api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
     )
+    deployment = _get_deployment(model)
+    lock = threading.Lock()
+    completed_since_save = [0]
 
-    keywords = {}
-    for seed in tqdm(seeds, desc="Extracting keywords"):
-        try:
-            response = client.chat.completions.create(
-                model=_get_deployment(model),
-                messages=[
-                    {"role": "system", "content": (
-                        "Extract the 3-5 most sensitive medical/harmful keywords "
-                        "from the following prompt. Return ONLY a JSON array of strings."
-                    )},
-                    {"role": "user", "content": seed["prompt"]},
-                ],
-                response_format={"type": "json_object"},
+    def _save_checkpoint():
+        with lock:
+            tmp_path = checkpoint_path + ".tmp"
+            with open(tmp_path, "w") as f:
+                json.dump(keywords, f, indent=1)
+            os.replace(tmp_path, checkpoint_path)
+
+    def _extract_local(text):
+        """Fallback: extract medical keywords using TF-IDF-like noun phrase extraction."""
+        import re
+        # Medical/harmful terms likely to be the code-switching targets
+        medical_terms = {
+            "dose", "dosage", "overdose", "lethal", "toxic", "poison", "drug",
+            "medication", "pill", "tablet", "injection", "syringe", "synthesis",
+            "compound", "chemical", "reagent", "precursor", "fentanyl", "morphine",
+            "opioid", "benzodiazepine", "barbiturate", "cyanide", "arsenic",
+            "suicide", "self-harm", "cutting", "hanging", "asphyxiation",
+            "diagnosis", "treatment", "prescription", "surgery", "procedure",
+            "patient", "record", "medical", "clinical", "hospital", "physician",
+            "symptom", "disease", "infection", "cancer", "tumor", "blood",
+            "organ", "transplant", "vaccine", "therapy", "radiation",
+        }
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+        # Score: medical terms first, then longest remaining nouns
+        found = [w for w in words if w in medical_terms]
+        # Deduplicate preserving order
+        seen = set()
+        unique = []
+        for w in found:
+            if w not in seen:
+                seen.add(w)
+                unique.append(w)
+        if len(unique) < 3:
+            # Add longest non-stopword terms
+            stopwords = {"the", "and", "for", "that", "with", "this", "from",
+                         "are", "was", "were", "been", "have", "has", "had",
+                         "will", "would", "could", "should", "can", "may",
+                         "how", "what", "which", "who", "whom", "where",
+                         "when", "why", "about", "into", "through", "during",
+                         "before", "after", "above", "below", "between",
+                         "your", "you", "they", "them", "their", "its",
+                         "not", "but", "also", "just", "than", "then",
+                         "some", "any", "all", "each", "every", "both",
+                         "such", "like", "other", "more", "most", "very"}
+            extra = sorted(
+                [w for w in set(words) if w not in stopwords and w not in seen],
+                key=len, reverse=True
             )
-            # Track cost via judge module
-            usage = getattr(response, "usage", None)
-            if usage:
-                track_external_usage(
-                    usage.prompt_tokens, usage.completion_tokens,
-                    task="keyword_extraction", model=model,
-                )
-            result = json.loads(response.choices[0].message.content)
-            kw_list = result.get("keywords", result.get("result", []))
-            if isinstance(kw_list, list):
-                keywords[seed["seed_id"]] = kw_list
-            else:
-                keywords[seed["seed_id"]] = []
-        except Exception as e:
-            print(f"  Keyword extraction error for {seed['seed_id']}: {e}")
-            keywords[seed["seed_id"]] = []
+            unique.extend(extra[:5 - len(unique)])
+        return unique[:5]
 
+    fallback_count = [0]
+
+    def _extract_one(seed):
+        for attempt in range(3):
+            try:
+                response = client.chat.completions.create(
+                    model=deployment,
+                    messages=[
+                        {"role": "system", "content": (
+                            "Extract the 3-5 most sensitive medical/harmful keywords "
+                            "from the following prompt. Return ONLY a JSON array of strings."
+                        )},
+                        {"role": "user", "content": seed["prompt"]},
+                    ],
+                    response_format={"type": "json_object"},
+                    timeout=request_timeout,
+                )
+                usage = getattr(response, "usage", None)
+                if usage:
+                    track_external_usage(
+                        usage.prompt_tokens, usage.completion_tokens,
+                        task="keyword_extraction", model=model,
+                    )
+                result = json.loads(response.choices[0].message.content)
+                kw_list = result.get("keywords", result.get("result", []))
+                if not isinstance(kw_list, list):
+                    # Try any list value in the response
+                    kw_list = next((v for v in result.values() if isinstance(v, list)), [])
+                if kw_list:
+                    return seed["seed_id"], kw_list
+                # API returned empty/unparseable — use local fallback
+                kw = _extract_local(seed["prompt"])
+                fallback_count[0] += 1
+                return seed["seed_id"], kw
+            except Exception as e:
+                err_str = str(e).lower()
+                if any(k in err_str for k in ["rate_limit", "429", "timeout", "connection"]):
+                    wait = 2 ** (attempt + 1)
+                    _time.sleep(wait)
+                    continue
+                if "content_filter" in err_str or "content_management" in err_str:
+                    kw = _extract_local(seed["prompt"])
+                    fallback_count[0] += 1
+                    return seed["seed_id"], kw
+                print(f"  Keyword extraction error for {seed['seed_id']}: {e}")
+                kw = _extract_local(seed["prompt"])
+                fallback_count[0] += 1
+                return seed["seed_id"], kw
+        print(f"  Keyword extraction failed after retries for {seed['seed_id']}")
+        kw = _extract_local(seed["prompt"])
+        fallback_count[0] += 1
+        return seed["seed_id"], kw
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_extract_one, s): s for s in remaining}
+        for future in tqdm(as_completed(futures), total=len(remaining), desc="Extracting keywords"):
+            seed_id, kw_list = future.result()
+            with lock:
+                keywords[seed_id] = kw_list
+                completed_since_save[0] += 1
+            if completed_since_save[0] >= checkpoint_interval:
+                _save_checkpoint()
+                completed_since_save[0] = 0
+
+    # Final save
+    _save_checkpoint()
+    if fallback_count[0] > 0:
+        print(f"  Content-filtered prompts handled via local fallback: {fallback_count[0]}")
     return keywords
 
 
@@ -431,9 +607,21 @@ def code_switch_prompt(seed, keywords, language, cache_path=None):
 # ---------------------------------------------------------------------------
 # 7. Back-Translation & Semantic Similarity
 # ---------------------------------------------------------------------------
-def back_translate(text, language, target="en"):
+def back_translate(
+    text,
+    language,
+    target="en",
+    max_google_attempts: int = 5,
+    max_mymemory_attempts: int = 3,
+):
     """Back-translate text from a language to English."""
-    result = translate_with_fallback(text, source=language, target=target)
+    result = translate_with_fallback(
+        text,
+        source=language,
+        target=target,
+        max_google_attempts=max_google_attempts,
+        max_mymemory_attempts=max_mymemory_attempts,
+    )
     return result["translation"]
 
 

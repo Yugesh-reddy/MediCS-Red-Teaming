@@ -40,6 +40,16 @@ dataset:
   dedup_similarity_threshold: 0.85
   semantic_threshold: 0.75
   translation_cache_flush_interval: 50
+  keyword_extraction:
+    max_workers: 10
+    checkpoint_interval: 50
+    request_timeout: 30
+  code_switching:
+    max_workers: 10
+  back_translation:
+    max_workers: 30
+    google_attempts: 2
+    mymemory_attempts: 1
 
 data_dir: "data"
 
