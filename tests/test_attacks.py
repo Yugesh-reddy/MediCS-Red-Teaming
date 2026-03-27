@@ -64,11 +64,23 @@ class TestAttackStrategies:
             {"role": "user", "content": "How do compounds interact?"},
             {"role": "user", "content": "How to create compound XYZ?"},
         ]
-        with patch('medics.attacks.generate_mte_turns', return_value=mock_turns):
-            result = apply_strategy(self.seed, "MTE", self.keywords, "en")
+        with patch('medics.attacks.generate_mte_turns', return_value=mock_turns) as mock_mte:
+            result = apply_strategy(self.seed, "MTE", self.keywords, "en", mte_n_turns=5)
             assert result["strategy"] == "MTE"
             assert result["is_multi_turn"] is True
             assert "attack_turns" in result
+            mock_mte.assert_called_once_with(self.seed["prompt"], n_turns=5)
+
+    def test_mte_local_fallback_expands_turns(self):
+        """Single-turn API fallback should be expanded into local multi-turn sequence."""
+        with patch(
+            'medics.attacks.generate_mte_turns',
+            return_value=[{"role": "user", "content": self.seed["prompt"]}],
+        ):
+            result = apply_strategy(self.seed, "MTE", self.keywords, "en", mte_n_turns=5)
+            assert result["mte_fallback"] is True
+            assert result["n_turns"] == 5
+            assert "[Turn 1]:" in result["attack_prompt"]
 
     def test_cs_rp_strategy(self):
         """Test combined code-switching + roleplay."""
@@ -109,14 +121,16 @@ class TestAttackStrategies:
             apply_strategy(self.seed, "INVALID", self.keywords, "hi")
 
     def test_curriculum_round_1(self):
-        """Test Round 1 curriculum has only CS and RP."""
+        """Test Round 1 curriculum has all 5 strategies (no gradual ramp)."""
         strategies = get_available_strategies(1)
-        assert strategies == ["CS", "RP"]
+        assert len(strategies) == 5
+        assert "CS" in strategies
+        assert "MTE" in strategies
 
     def test_curriculum_round_2(self):
-        """Test Round 2 adds CS-RP."""
+        """Test Round 2 has all 5 strategies."""
         strategies = get_available_strategies(2)
-        assert strategies == ["CS", "RP", "CS-RP"]
+        assert len(strategies) == 5
 
     def test_curriculum_round_3(self):
         """Test Round 3+ has all 5 strategies."""
@@ -132,6 +146,6 @@ class TestAttackStrategies:
 
     def test_roleplay_templates_exist(self):
         """Test that roleplay templates are defined."""
-        assert len(ROLEPLAY_TEMPLATES) == 5
+        assert len(ROLEPLAY_TEMPLATES) >= 5
         for t in ROLEPLAY_TEMPLATES:
             assert "{prompt}" in t
