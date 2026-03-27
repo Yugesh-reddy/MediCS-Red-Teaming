@@ -40,6 +40,13 @@ def main():
     # Load local .env if present (HF token, endpoints, etc.)
     load_dotenv()
 
+    # Auto-login to HuggingFace for gated model access
+    import os
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token:
+        from huggingface_hub import login
+        login(token=hf_token, add_to_git_credential=False)
+
     # Set all random seeds for reproducibility
     set_seed(args.seed)
     torch.manual_seed(args.seed)

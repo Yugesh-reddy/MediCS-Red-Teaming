@@ -114,6 +114,8 @@ def normalize_seed(seed):
 
     Handles: 'original_en' -> 'prompt', 'id' -> 'seed_id'.
     """
+    if "prompt" not in seed and "original_prompt" in seed:
+        seed["prompt"] = seed["original_prompt"]
     if "prompt" not in seed and "original_en" in seed:
         seed["prompt"] = seed["original_en"]
     if "seed_id" not in seed and "id" in seed:
