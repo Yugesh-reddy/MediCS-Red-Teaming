@@ -141,6 +141,22 @@ def compute_judge_error_rate(results):
     return errors / len(results)
 
 
+def compute_judge_fallback_rate(results):
+    """
+    Fraction of results that used heuristic fallback instead of GPT judge.
+
+    Args:
+        results: list of dicts, fallback results have 'judge_fallback': True
+
+    Returns:
+        float: fallback rate (0.0 to 1.0)
+    """
+    if not results:
+        return 0.0
+    fallbacks = sum(1 for r in results if r.get("judge_fallback"))
+    return fallbacks / len(results)
+
+
 def bootstrap_ci(values, n_bootstrap=10000, confidence=0.95, seed=42):
     """
     Bootstrap confidence interval (seeded for reproducibility).
