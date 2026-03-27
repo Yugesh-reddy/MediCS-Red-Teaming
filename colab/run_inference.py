@@ -109,7 +109,9 @@ def _generate_multi_turn(model, tokenizer, turns, gen_cfg):
 
 def run_inference(model, tokenizer, prompts, gen_cfg):
     """Run inference on a batch of prompts. Handles both single and multi-turn."""
+    import time
     results = []
+    start = time.time()
     for i, prompt_data in enumerate(prompts):
         is_multi_turn = prompt_data.get("is_multi_turn", False)
         attack_turns = prompt_data.get("attack_turns", [])
@@ -127,7 +129,11 @@ def run_inference(model, tokenizer, prompts, gen_cfg):
         results.append(result)
 
         if (i + 1) % 25 == 0:
-            print(f"  [{i+1}/{len(prompts)}] processed")
+            elapsed = time.time() - start
+            per_prompt = elapsed / (i + 1)
+            remaining = per_prompt * (len(prompts) - i - 1)
+            print(f"  [{i+1}/{len(prompts)}] processed "
+                  f"({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)")
 
     return results
 
@@ -149,6 +155,13 @@ def main():
 
     # Load local .env if present (HF token, endpoints, etc.)
     load_dotenv()
+
+    # Auto-login to HuggingFace for gated model access
+    import os
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token:
+        from huggingface_hub import login
+        login(token=hf_token, add_to_git_credential=False)
 
     # Set all random seeds for reproducibility
     set_seed(args.seed)
