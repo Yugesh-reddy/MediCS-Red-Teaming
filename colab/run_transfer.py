@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
 from medics.utils import load_jsonl, save_jsonl, load_config, load_dotenv
-from medics.defense import MEDICAL_SYSTEM_PROMPT
+from medics.defense import BASE_SYSTEM_PROMPT
 
 
 def main():
@@ -87,7 +87,7 @@ def main():
                   prompt_data.get("prompt", ""))
 
         messages = [
-            {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
+            {"role": "system", "content": BASE_SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ]
         text = tokenizer.apply_chat_template(
