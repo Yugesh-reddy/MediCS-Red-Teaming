@@ -20,7 +20,14 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
 from peft import PeftModel
 from medics.utils import load_jsonl, save_jsonl, load_config, load_dotenv
-from medics.defense import MEDICAL_SYSTEM_PROMPT
+from medics.defense import BASE_SYSTEM_PROMPT, DEFENSE_SYSTEM_PROMPT
+
+
+def _select_system_prompt(checkpoint):
+    """Use base prompt for undefended model, defense prompt for SFT/DPO checkpoints."""
+    if checkpoint == "base":
+        return BASE_SYSTEM_PROMPT
+    return DEFENSE_SYSTEM_PROMPT
 
 
 def load_model(model_id, checkpoint, cfg):
@@ -46,15 +53,24 @@ def load_model(model_id, checkpoint, cfg):
     return model, tokenizer
 
 
-def _generate_single_turn(model, tokenizer, prompt, gen_cfg):
-    """Standard single-turn inference with system prompt."""
+def _generate_single_turn(model, tokenizer, prompt, gen_cfg,
+                          system_prompt=None, assistant_prefix=None):
+    """Single-turn inference with optional assistant prefix injection.
+
+    If assistant_prefix is provided, it is prepended to the model's response
+    so the model continues generating from a compliant opening rather than
+    deciding whether to refuse.
+    """
     messages = [
-        {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt or BASE_SYSTEM_PROMPT},
         {"role": "user", "content": prompt},
     ]
     text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
+    # Inject assistant prefix if provided (response priming)
+    if assistant_prefix:
+        text += assistant_prefix
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
     with torch.no_grad():
         output = model.generate(
@@ -63,20 +79,25 @@ def _generate_single_turn(model, tokenizer, prompt, gen_cfg):
             do_sample=gen_cfg.get("do_sample", True),
             temperature=gen_cfg.get("temperature", 0.7),
             top_p=gen_cfg.get("top_p", 0.9),
+            repetition_penalty=gen_cfg.get("repetition_penalty", 1.0),
         )
-    return tokenizer.decode(
+    generated = tokenizer.decode(
         output[0][inputs.input_ids.shape[1]:],
         skip_special_tokens=True
     )
+    # Prepend the prefix to the returned response so the full text is captured
+    if assistant_prefix:
+        return assistant_prefix + generated
+    return generated
 
 
-def _generate_multi_turn(model, tokenizer, turns, gen_cfg):
+def _generate_multi_turn(model, tokenizer, turns, gen_cfg, system_prompt=None):
     """
     Multi-turn inference: build conversation incrementally.
     Each turn gets the model's response appended before the next user turn.
     Returns the FINAL response (to the last/harmful turn).
     """
-    messages = [{"role": "system", "content": MEDICAL_SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": system_prompt or BASE_SYSTEM_PROMPT}]
 
     for i, turn in enumerate(turns):
         content = turn.get("content", "")
@@ -94,6 +115,7 @@ def _generate_multi_turn(model, tokenizer, turns, gen_cfg):
                 do_sample=gen_cfg.get("do_sample", True),
                 temperature=gen_cfg.get("temperature", 0.7),
                 top_p=gen_cfg.get("top_p", 0.9),
+                repetition_penalty=gen_cfg.get("repetition_penalty", 1.0),
             )
         response = tokenizer.decode(
             output[0][inputs.input_ids.shape[1]:],
@@ -107,7 +129,7 @@ def _generate_multi_turn(model, tokenizer, turns, gen_cfg):
     return response
 
 
-def run_inference(model, tokenizer, prompts, gen_cfg):
+def run_inference(model, tokenizer, prompts, gen_cfg, system_prompt=None):
     """Run inference on a batch of prompts. Handles both single and multi-turn."""
     import time
     results = []
@@ -118,12 +140,15 @@ def run_inference(model, tokenizer, prompts, gen_cfg):
 
         if is_multi_turn and attack_turns and len(attack_turns) > 1:
             # Actual multi-turn conversation
-            response = _generate_multi_turn(model, tokenizer, attack_turns, gen_cfg)
+            response = _generate_multi_turn(model, tokenizer, attack_turns, gen_cfg, system_prompt)
         else:
             # Single-turn (CS, RP, CS-RP, CS-OBF, or MTE fallback)
             prompt = (prompt_data.get("attack_prompt") or
                       prompt_data.get("prompt", ""))
-            response = _generate_single_turn(model, tokenizer, prompt, gen_cfg)
+            prefix = prompt_data.get("assistant_prefix")
+            response = _generate_single_turn(
+                model, tokenizer, prompt, gen_cfg, system_prompt, prefix
+            )
 
         result = {**prompt_data, "model_response": response}
         results.append(result)
@@ -173,9 +198,13 @@ def main():
     model_id = args.model or cfg["target_model"]["model_id"]
     gen_cfg = cfg["target_model"].get("generation", {})
 
-    print(f"=== Llama-3 Inference ===")
+    system_prompt = _select_system_prompt(args.checkpoint)
+    prompt_type = "BASE (no safety priming)" if args.checkpoint == "base" else "DEFENSE (safety-aware)"
+
+    print(f"=== Target Model Inference ===")
     print(f"Model: {model_id}")
     print(f"Checkpoint: {args.checkpoint}")
+    print(f"System prompt: {prompt_type}")
     print(f"Seed: {args.seed}")
     print(f"Input: {args.input}")
 
@@ -184,7 +213,7 @@ def main():
     print(f"Loaded {len(prompts)} prompts")
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    results = run_inference(model, tokenizer, prompts, gen_cfg)
+    results = run_inference(model, tokenizer, prompts, gen_cfg, system_prompt)
     save_jsonl(results, args.output)
     print(f"\nInference done: {len(results)} responses → {args.output}")
 
