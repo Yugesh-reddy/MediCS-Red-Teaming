@@ -82,7 +82,7 @@ categories:
   - "UCA"
 
 target_model:
-  model_id: "meta-llama/Meta-Llama-3-8B-Instruct"
+  model_id: "unsloth/Llama-3.2-3B-Instruct"
   quantization: "4bit-nf4"
   double_quant: true
   compute_dtype: "bfloat16"
