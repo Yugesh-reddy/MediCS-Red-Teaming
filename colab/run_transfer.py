@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Run MediCS-500 held-out set against Mistral-7B-Instruct (base only).
+Run MediCS-500 held-out set against Mistral-7B-Instruct.
 Tests whether code-switching attacks are model-specific or universal.
 
   !python colab/run_transfer.py --input data/splits/held_out_eval.jsonl
+  !python colab/run_transfer.py --input ... --system-prompt defense
 
 Cost: $0 (GPU time only, no API calls)
 Time: ~30 minutes on T4
 
-NOTE: Uses the same system prompt as Llama-3 for fair comparison.
+Default: BASE system prompt (same as Llama-3 evaluation, for fair comparison).
+Override with --system-prompt defense for ablation.
 After inference, run the judge phase to compute ASR:
-  python scripts/04_evaluate.py --transfer --input results/transfer/mistral_results.jsonl
+  python scripts/04_evaluate.py --judge-transfer --input results/transfer/mistral_results.jsonl
 """
 
 import argparse
@@ -22,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
 from medics.utils import load_jsonl, save_jsonl, load_config, load_dotenv
-from medics.defense import BASE_SYSTEM_PROMPT
+from medics.defense import BASE_SYSTEM_PROMPT, DEFENSE_SYSTEM_PROMPT
 
 
 def main():
@@ -34,6 +36,9 @@ def main():
                         help="Override transfer model ID from config")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducible inference")
+    parser.add_argument("--system-prompt", choices=["base", "defense"],
+                        default=None,
+                        help="Override system prompt (default: base)")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
 
@@ -57,8 +62,19 @@ def main():
     transfer_model = args.model or cfg["transfer"]["model_id"]
     gen_cfg = cfg["target_model"].get("generation", {})
 
+    # System prompt: explicit override > default (base)
+    if args.system_prompt == "defense":
+        transfer_sys_prompt = DEFENSE_SYSTEM_PROMPT
+        prompt_mode = "defense"
+        prompt_type = "DEFENSE (safety-aware) [override]"
+    else:
+        transfer_sys_prompt = BASE_SYSTEM_PROMPT
+        prompt_mode = "base"
+        prompt_type = "BASE (no safety priming)"
+
     print(f"=== Transfer Evaluation: Mistral-7B ===")
     print(f"Model: {transfer_model}")
+    print(f"System prompt: {prompt_type}")
     print(f"Seed: {args.seed}")
     print(f"Input: {args.input}")
 
@@ -87,7 +103,7 @@ def main():
                   prompt_data.get("prompt", ""))
 
         messages = [
-            {"role": "system", "content": BASE_SYSTEM_PROMPT},
+            {"role": "system", "content": transfer_sys_prompt},
             {"role": "user", "content": prompt},
         ]
         text = tokenizer.apply_chat_template(
@@ -111,6 +127,7 @@ def main():
             **prompt_data,
             "model_response": response,
             "transfer_model": transfer_model,
+            "system_prompt_mode": prompt_mode,
         }
         results.append(result)
 
