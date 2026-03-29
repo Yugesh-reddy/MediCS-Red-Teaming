@@ -144,6 +144,19 @@ class TestAttackStrategies:
         strategies = get_available_strategies(5)
         assert len(strategies) == 5
 
+    def test_mte_local_fallback_honours_high_n_turns(self):
+        """MTE local fallback should cycle scaffolds to fill requested n_turns, not silently truncate."""
+        with patch(
+            'medics.attacks.generate_mte_turns',
+            return_value=[{"role": "user", "content": self.seed["prompt"]}],
+        ):
+            result = apply_strategy(self.seed, "MTE", self.keywords, "en", mte_n_turns=8)
+            assert result["mte_fallback"] is True
+            assert result["n_turns"] == 8, (
+                f"Expected 8 turns but got {result['n_turns']}; "
+                "local MTE should cycle scaffolds, not truncate"
+            )
+
     def test_roleplay_templates_exist(self):
         """Test that roleplay templates are defined."""
         assert len(ROLEPLAY_TEMPLATES) >= 5
