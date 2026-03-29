@@ -225,13 +225,18 @@ _MTE_GENERIC = [
 
 def _local_mte_turns(prompt: str, n_turns: int,
                      category: str = "") -> list[dict]:
-    """Topic-aware MTE scaffolds that build genuine medical context."""
+    """Topic-aware MTE scaffolds that build genuine medical context.
+
+    Cycles through scaffold entries if n_turns exceeds scaffold length,
+    so the requested depth is always honoured.
+    """
     n_turns = max(3, int(n_turns))
     scaffold = _MTE_SCAFFOLDS.get(category, _MTE_GENERIC)
 
+    warmup_count = n_turns - 1  # reserve last slot for the actual prompt
     turns = []
-    for i in range(min(n_turns - 1, len(scaffold))):
-        turns.append({"role": "user", "content": scaffold[i]})
+    for i in range(warmup_count):
+        turns.append({"role": "user", "content": scaffold[i % len(scaffold)]})
     turns.append({"role": "user", "content": prompt})
     return turns
 
