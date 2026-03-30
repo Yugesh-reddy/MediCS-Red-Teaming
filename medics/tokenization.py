@@ -96,7 +96,11 @@ def analyze_tokenization(tokenizer_name_or_path, seeds, keywords, languages,
         seeds: list of seed dicts with 'prompt', 'seed_id', 'category'
         keywords: dict mapping seed_id -> list of keyword strings
         languages: list of language code strings (e.g., ["hi", "bn", "sw"])
-        translate_fn: optional function(text, lang) -> translated_text.
+        translate_fn: optional translation function.
+                      Supported signatures:
+                      - translate_fn(text, lang) -> str|dict
+                      - translate_fn(text, source="en", target=lang) -> str|dict
+                      Dict outputs should contain {"translation": "..."}.
                       If None, imports translate_with_fallback from medics.utils.
         max_seeds: max number of seeds to analyze (0 = all)
 
@@ -114,10 +118,34 @@ def analyze_tokenization(tokenizer_name_or_path, seeds, keywords, languages,
     if max_seeds > 0:
         seeds = seeds[:max_seeds]
 
+    def _to_text(value, fallback):
+        """Normalize translation outputs to plain text."""
+        if isinstance(value, dict):
+            tr = value.get("translation", fallback)
+            return tr if isinstance(tr, str) else str(tr)
+        if isinstance(value, str):
+            return value
+        if value is None:
+            return fallback
+        return str(value)
+
+    def _translate_text(text, lang):
+        """Translate text robustly across supported translate_fn signatures."""
+        try:
+            try:
+                out = translate_fn(text, source="en", target=lang)
+            except TypeError:
+                out = translate_fn(text, lang)
+            return _to_text(out, text)
+        except Exception:
+            return text
+
     results = []
     for i, seed in enumerate(seeds):
         seed_id = seed.get("seed_id", f"seed_{i}")
-        prompt = seed.get("prompt", "")
+        prompt = (seed.get("prompt")
+                  or seed.get("original_prompt")
+                  or seed.get("attack_prompt", ""))
         category = seed.get("category", "unknown")
         seed_keywords = keywords.get(seed_id, [])
 
@@ -126,10 +154,7 @@ def analyze_tokenization(tokenizer_name_or_path, seeds, keywords, languages,
 
         for lang in languages:
             # Translate the full prompt
-            try:
-                translated_prompt = translate_fn(prompt, lang)
-            except Exception:
-                translated_prompt = prompt  # fallback to English
+            translated_prompt = _translate_text(prompt, lang)
 
             cs_metrics = _tokenize_and_measure(tokenizer, translated_prompt)
 
@@ -137,7 +162,7 @@ def analyze_tokenization(tokenizer_name_or_path, seeds, keywords, languages,
             kw_frag = []
             for kw in seed_keywords:
                 try:
-                    translated_kw = translate_fn(kw, lang)
+                    translated_kw = _translate_text(kw, lang)
                     frag = _keyword_fragmentation(tokenizer, kw, translated_kw)
                     kw_frag.append(frag)
                 except Exception:
