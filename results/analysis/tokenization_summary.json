@@ -1,0 +1,56 @@
+{
+  "bn": {
+    "mean_ratio": 5.872,
+    "median_ratio": 5.856,
+    "max_ratio": 8.15,
+    "std_ratio": 0.685,
+    "mean_oov_proxy": 0.4344,
+    "mean_kw_ratio": 5.68,
+    "n_seeds": 2665
+  },
+  "gu": {
+    "mean_ratio": 7.908,
+    "median_ratio": 7.907,
+    "max_ratio": 10.393,
+    "std_ratio": 0.958,
+    "mean_oov_proxy": 0.5026,
+    "mean_kw_ratio": 7.841,
+    "n_seeds": 2665
+  },
+  "hi": {
+    "mean_ratio": 2.673,
+    "median_ratio": 2.667,
+    "max_ratio": 3.413,
+    "std_ratio": 0.252,
+    "mean_oov_proxy": 0.0227,
+    "mean_kw_ratio": 2.43,
+    "n_seeds": 2665
+  },
+  "sw": {
+    "mean_ratio": 1.942,
+    "median_ratio": 1.927,
+    "max_ratio": 2.667,
+    "std_ratio": 0.228,
+    "mean_oov_proxy": 0.11,
+    "mean_kw_ratio": 1.861,
+    "n_seeds": 2665
+  },
+  "tl": {
+    "mean_ratio": 1.782,
+    "median_ratio": 1.762,
+    "max_ratio": 2.793,
+    "std_ratio": 0.225,
+    "mean_oov_proxy": 0.0819,
+    "mean_kw_ratio": 1.724,
+    "n_seeds": 2665
+  },
+  "yo": {
+    "mean_ratio": 2.09,
+    "median_ratio": 2.056,
+    "max_ratio": 3.398,
+    "std_ratio": 0.297,
+    "mean_oov_proxy": 0.1954,
+    "mean_kw_ratio": 1.827,
+    "n_seeds": 2665
+  }
+}
