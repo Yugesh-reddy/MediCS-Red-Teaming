@@ -40,8 +40,8 @@ def build_sft_data(jailbreaks, benign_twins, rng_seed=42):
     """
     Build balanced SFT training data.
 
-    Refusal examples: jailbreak prompt → GPT-4o refusal
-    Helpful examples: benign twin → GPT-4o helpful response
+    Refusal examples: jailbreak prompt → GPT-5 refusal
+    Helpful examples: benign twin → GPT-5 helpful response
     Enforced 1:1 ratio to prevent over-refusal.
     Helpful examples are randomly sampled (not first-N) to avoid ordering bias.
 
@@ -57,7 +57,7 @@ def build_sft_data(jailbreaks, benign_twins, rng_seed=42):
     """
     rng = random.Random(rng_seed)
 
-    # Generate refusals for jailbreaks (GPT-4o API call)
+    # Generate refusals for jailbreaks (GPT-5 API call)
     refusals = generate_refusal_batch(
         [jb["attack_prompt"] for jb in jailbreaks]
     )
@@ -75,7 +75,7 @@ def build_sft_data(jailbreaks, benign_twins, rng_seed=42):
             "seed_id": jb.get("seed_id", ""),
         })
 
-    # Generate helpful responses for benign twins (GPT-4o API call)
+    # Generate helpful responses for benign twins (GPT-5 API call)
     helpful_responses = generate_helpful_batch(
         [_get_benign_prompt(bt) for bt in benign_twins]
     )
