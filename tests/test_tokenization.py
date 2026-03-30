@@ -11,6 +11,7 @@ from medics.tokenization import (
     _keyword_fragmentation,
     compute_oov_proxy,
     compute_fragmentation_summary,
+    analyze_tokenization,
 )
 
 
@@ -105,3 +106,67 @@ class TestFragmentationSummary:
     def test_empty(self):
         summary = compute_fragmentation_summary([])
         assert summary == {}
+
+
+class TestAnalyzeTokenization:
+    def test_translate_fn_source_target_returns_dict(self):
+        tok = _mock_tokenizer()
+        seeds = [{"seed_id": "S1", "prompt": "hello world", "category": "TOX"}]
+        keywords = {"S1": ["hello"]}
+
+        def mock_translate(text, source="en", target="hi"):
+            return {"translation": f"{text}_{target}", "source": "mock"}
+
+        from unittest.mock import patch
+        with patch("transformers.AutoTokenizer.from_pretrained", return_value=tok):
+            results = analyze_tokenization(
+                tokenizer_name_or_path="dummy",
+                seeds=seeds,
+                keywords=keywords,
+                languages=["hi"],
+                translate_fn=mock_translate,
+            )
+        assert len(results) == 1
+        assert results[0]["language"] == "hi"
+        assert results[0]["cs_token_count"] > 0
+
+    def test_translate_fn_two_args_returns_dict(self):
+        tok = _mock_tokenizer()
+        seeds = [{"seed_id": "S1", "prompt": "hello world", "category": "TOX"}]
+        keywords = {"S1": ["hello"]}
+
+        def mock_translate(text, lang):
+            return {"translation": f"{text}_{lang}", "source": "mock"}
+
+        from unittest.mock import patch
+        with patch("transformers.AutoTokenizer.from_pretrained", return_value=tok):
+            results = analyze_tokenization(
+                tokenizer_name_or_path="dummy",
+                seeds=seeds,
+                keywords=keywords,
+                languages=["hi"],
+                translate_fn=mock_translate,
+            )
+        assert len(results) == 1
+        assert results[0]["language"] == "hi"
+        assert results[0]["cs_token_count"] > 0
+
+    def test_uses_original_prompt_when_prompt_missing(self):
+        tok = _mock_tokenizer()
+        seeds = [{"seed_id": "S1", "original_prompt": "hello world", "category": "TOX"}]
+        keywords = {"S1": ["hello"]}
+
+        def identity_translate(text, lang):
+            return text
+
+        from unittest.mock import patch
+        with patch("transformers.AutoTokenizer.from_pretrained", return_value=tok):
+            results = analyze_tokenization(
+                tokenizer_name_or_path="dummy",
+                seeds=seeds,
+                keywords=keywords,
+                languages=["hi"],
+                translate_fn=identity_translate,
+            )
+        assert len(results) == 1
+        assert results[0]["en_token_count"] > 0
