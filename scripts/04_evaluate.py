@@ -5,8 +5,8 @@ Full evaluation pipeline. No GPU needed — reads saved inference results.
 Multi-seed evaluation: expects results at results/eval/{ckpt}/seed_{seed}/held_out.jsonl
 If multi-seed results not found, falls back to results/eval/{ckpt}/held_out.jsonl (single run).
 
-Also supports --judge-helpfulness to run GPT-4o helpfulness judging on benign results.
-Also supports --judge-transfer to run GPT-4o safety judging on transfer results.
+Also supports --judge-helpfulness to run GPT-5 helpfulness judging on benign results.
+Also supports --judge-transfer to run GPT-5 safety judging on transfer results.
 
 Usage:
   python scripts/04_evaluate.py --checkpoints base,sft,dpo --seeds 42,123,456
@@ -253,7 +253,7 @@ def _find_results_path(ckpt, seed, filename):
 
 
 def judge_helpfulness_cmd(args):
-    """Judge helpfulness of benign evaluation results via GPT-4o."""
+    """Judge helpfulness of benign evaluation results via GPT-5."""
     results = load_jsonl(args.input)
     if not results:
         print(f"ERROR: No results at {args.input}")
@@ -278,7 +278,7 @@ def judge_helpfulness_cmd(args):
 
 
 def judge_transfer_cmd(args):
-    """Judge transfer evaluation results via GPT-4o safety judge."""
+    """Judge transfer evaluation results via GPT-5 safety judge."""
     results = load_jsonl(args.input)
     if not results:
         print(f"ERROR: No results at {args.input}")
