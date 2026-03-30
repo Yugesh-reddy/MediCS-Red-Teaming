@@ -1,0 +1,16 @@
+[
+  {
+    "phase": "Dataset Construction",
+    "duration_sec": 61.38,
+    "duration_min": 1.02,
+    "gpu": false,
+    "timestamp": "2026-03-29 21:05:29"
+  },
+  {
+    "phase": "Tokenization Analysis",
+    "duration_sec": 3067.86,
+    "duration_min": 51.13,
+    "gpu": false,
+    "timestamp": "2026-03-29 23:26:45"
+  }
+]
