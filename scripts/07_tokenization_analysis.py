@@ -12,13 +12,14 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from medics.tokenization import analyze_tokenization, compute_fragmentation_summary
-from medics.utils import load_jsonl, load_json, save_json, load_config
+from medics.utils import load_jsonl, load_json, save_json, load_config, load_dotenv
 
 
 def main():
@@ -29,6 +30,20 @@ def main():
     parser.add_argument("--output-dir", default=None,
                         help="Override output directory")
     args = parser.parse_args()
+
+    # Load local .env if present (HF token, endpoints, etc.)
+    load_dotenv()
+
+    # Auto-login to HuggingFace for gated tokenizer/model access
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token:
+        try:
+            from huggingface_hub import login
+            login(token=hf_token, add_to_git_credential=False)
+        except Exception as e:
+            print(f"WARNING: HF login failed ({e}). Continuing without explicit login.")
+    else:
+        print("WARNING: HF_TOKEN not set. Gated tokenizers may fail with 401.")
 
     config = load_config(args.config)
     model_id = config["target_model"]["model_id"]
@@ -60,13 +75,32 @@ def main():
     if max_seeds > 0:
         print(f"Max seeds: {max_seeds}")
 
-    results = analyze_tokenization(
-        tokenizer_name_or_path=model_id,
-        seeds=seeds,
-        keywords=keywords,
-        languages=languages,
-        max_seeds=max_seeds,
-    )
+    try:
+        results = analyze_tokenization(
+            tokenizer_name_or_path=model_id,
+            seeds=seeds,
+            keywords=keywords,
+            languages=languages,
+            max_seeds=max_seeds,
+        )
+    except Exception as e:
+        msg = str(e)
+        lower = msg.lower()
+        gated = (
+            "401" in msg
+            or "unauthorized" in lower
+            or "gated repo" in lower
+            or "access to model" in lower
+        )
+        if gated:
+            print("\nERROR: Hugging Face access denied for tokenizer/model.")
+            print(f"Model: {model_id}")
+            print("Fix checklist:")
+            print("  1. Request/confirm access on Hugging Face model page.")
+            print("  2. Set HF_TOKEN in your .env or environment.")
+            print("  3. Re-run this cell/script.")
+            sys.exit(1)
+        raise
 
     # Save detailed results
     Path(output_dir).mkdir(parents=True, exist_ok=True)
