@@ -10,7 +10,7 @@ Usage:
 Steps:
   1. Load raw_seeds.jsonl (500 curated prompts)
   2. Deduplicate (TF-IDF, threshold 0.85)
-  3. Extract keywords (GPT-4o-mini, ~$0.05)
+  3. Extract keywords (GPT-5-mini, low cost)
   4. Code-switch into 6 languages (deep-translator, free)
   5. Back-translate and verify semantic preservation (MiniLM, free)
   6. Create stratified 80/20 splits
