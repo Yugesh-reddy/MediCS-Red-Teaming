@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Run one attack round. Selects strategies via Thompson Sampling,
-applies attacks, calls GPT-4o judge. Does NOT run inference
+applies attacks, calls GPT-5 judge. Does NOT run inference
 (that requires GPU — see colab/run_inference.py).
 
 Workflow:
@@ -123,7 +123,10 @@ def main():
     if args.phase == "generate":
         attack_pool = [normalize_seed(s) for s in load_jsonl("data/splits/attack_pool.jsonl")]
         keywords = load_json("data/seeds/keywords_checkpoint.json")
-        if keywords is None:
+        if keywords is None or keywords == {}:
+            print("WARNING: keywords_checkpoint.json missing or empty.")
+            print("  CS/CS-RP/CS-OBF attacks will have NO keyword-driven code-switching.")
+            print("  Run scripts/01_build_dataset.py first to generate keywords.")
             keywords = {}
 
         attacks, bandit = generate_attacks(config, args.round, attack_pool, keywords)
