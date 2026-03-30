@@ -7,7 +7,7 @@ Core Python package. All logic lives here as importable, testable modules.
 Modules:
     utils          — File I/O, config, translation, caching, code-switching
     bandit         — Thompson Sampling (Beta-Bernoulli multi-armed bandit)
-    judge          — GPT-4o judge, helpfulness eval, API cost tracking
+    judge          — GPT-5 judge, helpfulness eval, API cost tracking
     attacks        — 5 attack strategy functions (CS, RP, MTE, CS-RP, CS-OBF)
     defense        — SFT/DPO data construction
     metrics        — ASR, RG, HR, FRR, bootstrap CI, McNemar, Cohen's h, residual analysis
@@ -34,4 +34,4 @@ Usage:
     from medics.ethics import generate_ethics_statement, format_ethics_section
 """
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"

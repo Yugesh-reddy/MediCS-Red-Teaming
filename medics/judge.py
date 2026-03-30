@@ -1,5 +1,5 @@
 """
-MediCS — GPT-4o Judge Wrapper
+MediCS — GPT-5 Judge Wrapper
 ==============================
 Safety judging, helpfulness evaluation, and response generation.
 All API calls go through this module. Tracks token usage for cost monitoring.
@@ -40,6 +40,7 @@ def get_session_usage() -> dict:
     pricing = {
         "gpt-5-chat": {"input": 1.25, "output": 10.00},
         "gpt-5-mini": {"input": 0.25, "output": 2.00},
+        # Legacy model IDs kept for backward-compatible cost reporting.
         "gpt-4o": {"input": 2.50, "output": 10.00},
         "gpt-4o-mini": {"input": 0.15, "output": 0.60},
     }

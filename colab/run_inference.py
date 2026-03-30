@@ -24,10 +24,14 @@ from medics.defense import BASE_SYSTEM_PROMPT, DEFENSE_SYSTEM_PROMPT
 
 
 def _select_system_prompt(checkpoint):
-    """Use base prompt for undefended model, defense prompt for SFT/DPO checkpoints."""
-    if checkpoint == "base":
-        return BASE_SYSTEM_PROMPT
-    return DEFENSE_SYSTEM_PROMPT
+    """Default: BASE prompt for all checkpoints.
+
+    The experiment measures whether fine-tuning (SFT/DPO) hardens the model
+    weights against attacks. Using the same neutral prompt for all checkpoints
+    ensures ASR deltas reflect training effect only, not prompt choice.
+    Override with --system-prompt defense for ablation runs.
+    """
+    return BASE_SYSTEM_PROMPT
 
 
 def load_model(model_id, checkpoint, cfg):
@@ -129,8 +133,14 @@ def _generate_multi_turn(model, tokenizer, turns, gen_cfg, system_prompt=None):
     return response
 
 
-def run_inference(model, tokenizer, prompts, gen_cfg, system_prompt=None):
-    """Run inference on a batch of prompts. Handles both single and multi-turn."""
+def run_inference(model, tokenizer, prompts, gen_cfg,
+                  system_prompt=None, system_prompt_mode="auto"):
+    """Run inference on a batch of prompts. Handles both single and multi-turn.
+
+    Args:
+        system_prompt_mode: recorded in every output row for traceability
+            ("base", "defense", or "auto").
+    """
     import time
     results = []
     start = time.time()
@@ -150,7 +160,8 @@ def run_inference(model, tokenizer, prompts, gen_cfg, system_prompt=None):
                 model, tokenizer, prompt, gen_cfg, system_prompt, prefix
             )
 
-        result = {**prompt_data, "model_response": response}
+        result = {**prompt_data, "model_response": response,
+                  "system_prompt_mode": system_prompt_mode}
         results.append(result)
 
         if (i + 1) % 25 == 0:
@@ -175,6 +186,9 @@ def main():
                         help="Override model ID from config")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducible inference")
+    parser.add_argument("--system-prompt", choices=["base", "defense"],
+                        default=None,
+                        help="System prompt mode (default: base for all checkpoints)")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
 
@@ -198,8 +212,19 @@ def main():
     model_id = args.model or cfg["target_model"]["model_id"]
     gen_cfg = cfg["target_model"].get("generation", {})
 
-    system_prompt = _select_system_prompt(args.checkpoint)
-    prompt_type = "BASE (no safety priming)" if args.checkpoint == "base" else "DEFENSE (safety-aware)"
+    # System prompt: explicit override > auto-select by checkpoint
+    if args.system_prompt == "base":
+        system_prompt = BASE_SYSTEM_PROMPT
+        prompt_mode = "base"
+        prompt_type = "BASE (no safety priming) [override]"
+    elif args.system_prompt == "defense":
+        system_prompt = DEFENSE_SYSTEM_PROMPT
+        prompt_mode = "defense"
+        prompt_type = "DEFENSE (safety-aware) [override]"
+    else:
+        system_prompt = _select_system_prompt(args.checkpoint)
+        prompt_mode = "base"
+        prompt_type = "BASE (neutral — measuring model weights, not prompt)"
 
     print(f"=== Target Model Inference ===")
     print(f"Model: {model_id}")
@@ -213,7 +238,8 @@ def main():
     print(f"Loaded {len(prompts)} prompts")
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    results = run_inference(model, tokenizer, prompts, gen_cfg, system_prompt)
+    results = run_inference(model, tokenizer, prompts, gen_cfg, system_prompt,
+                            system_prompt_mode=prompt_mode)
     save_jsonl(results, args.output)
     print(f"\nInference done: {len(results)} responses → {args.output}")
 

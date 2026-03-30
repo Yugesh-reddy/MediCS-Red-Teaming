@@ -4,7 +4,7 @@
 
 project:
   name: "MediCS Framework"
-  version: "2.1.0"
+  version: "2.3.0"
   course: "CS 516"
   authors: ["Yugesh Sappidi", "Yash Yeole"]
 
@@ -82,7 +82,7 @@ categories:
   - "UCA"
 
 target_model:
-  model_id: "unsloth/llama-3-8b-Instruct"
+  model_id: "meta-llama/Meta-Llama-3-8B-Instruct"
   quantization: "4bit-nf4"
   double_quant: true
   compute_dtype: "bfloat16"

@@ -89,7 +89,7 @@ def generate_ethics_statement(
         },
         "limitations": [
             f"Single target model ({model_name}) — defense generalization unverified.",
-            "Automated judge (GPT-4o) may have systematic biases in multilingual evaluation.",
+            "Automated judge (GPT-5-chat) may have systematic biases in multilingual evaluation.",
             "Code-switching is one of many possible multilingual attack vectors.",
             "Defense effectiveness may degrade against adaptive adversaries.",
             "Low-resource translation quality varies — some code-switched prompts may be unnatural.",
