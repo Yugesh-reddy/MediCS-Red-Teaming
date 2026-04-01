@@ -9,6 +9,7 @@ Saves: checkpoints/dpo/final/
 """
 
 import argparse
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -22,6 +23,37 @@ from peft import PeftModel, LoraConfig, get_peft_model, TaskType
 from trl import DPOTrainer, DPOConfig
 
 from medics.utils import load_config, load_dotenv
+
+
+def _resolve_compute_dtype(cfg):
+    """Resolve 4-bit compute dtype from config with safe GPU fallback."""
+    name = str(cfg["target_model"].get("compute_dtype", "bfloat16")).strip().lower()
+    mapping = {
+        "bfloat16": torch.bfloat16,
+        "bf16": torch.bfloat16,
+        "float16": torch.float16,
+        "fp16": torch.float16,
+        "float32": torch.float32,
+        "fp32": torch.float32,
+    }
+    dtype = mapping.get(name, torch.bfloat16)
+    label = "bfloat16" if dtype == torch.bfloat16 else "float16" if dtype == torch.float16 else "float32"
+
+    if dtype == torch.bfloat16 and torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        print("Requested compute_dtype=bfloat16 but GPU lacks BF16 support; falling back to float16.")
+        return torch.float16, "float16"
+    return dtype, label
+
+
+def _resolve_training_precision(train_cfg, compute_dtype):
+    """Choose trainer precision flags from compute dtype + config."""
+    use_bf16 = (
+        compute_dtype == torch.bfloat16
+        and torch.cuda.is_available()
+        and torch.cuda.is_bf16_supported()
+    )
+    use_fp16 = bool(train_cfg.get("fp16", True)) and not use_bf16 and compute_dtype != torch.float32
+    return use_bf16, use_fp16
 
 
 def main():
@@ -48,15 +80,19 @@ def main():
     dpo_cfg = cfg["defense"]["dpo"]
     lora_cfg = dpo_cfg["lora"]
     train_cfg = dpo_cfg["training"]
+    compute_dtype, dtype_label = _resolve_compute_dtype(cfg)
+    use_bf16, use_fp16 = _resolve_training_precision(train_cfg, compute_dtype)
 
     print("=== DPO Preference Optimization ===")
     print(f"Model: {model_id}")
+    print(f"4-bit compute dtype: {dtype_label}")
+    print(f"Trainer precision: bf16={use_bf16} fp16={use_fp16}")
 
     # --- Load base + merge SFT ---
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=compute_dtype,
         bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     base = AutoModelForCausalLM.from_pretrained(
@@ -100,31 +136,54 @@ def main():
     output_dir = "checkpoints/dpo"
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    config = DPOConfig(
-        output_dir=output_dir,
-        num_train_epochs=train_cfg["num_epochs"],
-        per_device_train_batch_size=train_cfg["per_device_batch_size"],
-        gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
-        learning_rate=train_cfg["learning_rate"],
-        beta=train_cfg["beta"],
-        loss_type=train_cfg.get("loss_type", "sigmoid"),
-        fp16=train_cfg.get("fp16", True),
-        logging_steps=train_cfg.get("logging_steps", 10),
-        save_strategy=train_cfg.get("save_strategy", "epoch"),
-        eval_strategy=train_cfg.get("eval_strategy", "epoch") if eval_dataset else "no",
-        max_length=train_cfg.get("max_length", 1024),
-        max_prompt_length=train_cfg.get("max_prompt_length", 512),
-        gradient_checkpointing=train_cfg.get("gradient_checkpointing", True),
-        seed=train_cfg.get("seed", 42),
-    )
+    # Build DPOConfig kwargs compatible across TRL versions
+    sig = inspect.signature(DPOConfig.__init__)
+    dpo_params = set(sig.parameters.keys())
 
-    trainer = DPOTrainer(
+    config_kwargs = {
+        "output_dir": output_dir,
+        "num_train_epochs": train_cfg["num_epochs"],
+        "per_device_train_batch_size": train_cfg["per_device_batch_size"],
+        "gradient_accumulation_steps": train_cfg["gradient_accumulation_steps"],
+        "learning_rate": train_cfg["learning_rate"],
+        "beta": train_cfg["beta"],
+        "loss_type": train_cfg.get("loss_type", "sigmoid"),
+        "logging_steps": train_cfg.get("logging_steps", 10),
+        "save_strategy": train_cfg.get("save_strategy", "epoch"),
+        "max_length": train_cfg.get("max_length", 1024),
+        "max_prompt_length": train_cfg.get("max_prompt_length", 512),
+        "gradient_checkpointing": train_cfg.get("gradient_checkpointing", True),
+        "seed": train_cfg.get("seed", 42),
+    }
+    if "bf16" in dpo_params:
+        config_kwargs["bf16"] = use_bf16
+    if "fp16" in dpo_params:
+        config_kwargs["fp16"] = use_fp16
+
+    eval_strat = train_cfg.get("eval_strategy", "epoch") if eval_dataset else "no"
+    if "eval_strategy" in dpo_params:
+        config_kwargs["eval_strategy"] = eval_strat
+    elif "evaluation_strategy" in dpo_params:
+        config_kwargs["evaluation_strategy"] = eval_strat
+
+    # Drop args unsupported by installed TRL
+    config_kwargs = {k: v for k, v in config_kwargs.items() if k in dpo_params}
+    print(f"DPOConfig args: {sorted(config_kwargs.keys())}")
+    config = DPOConfig(**config_kwargs)
+
+    # TRL >=0.15 renamed 'tokenizer' to 'processing_class'
+    trainer_kwargs = dict(
         model=model,
         args=config,
         train_dataset=dataset,
         eval_dataset=eval_dataset,
-        tokenizer=tokenizer,
     )
+    sig = inspect.signature(DPOTrainer.__init__)
+    if "processing_class" in sig.parameters:
+        trainer_kwargs["processing_class"] = tokenizer
+    else:
+        trainer_kwargs["tokenizer"] = tokenizer
+    trainer = DPOTrainer(**trainer_kwargs)
     result = trainer.train()
     trainer.save_model(f"{output_dir}/final")
     tokenizer.save_pretrained(f"{output_dir}/final")
