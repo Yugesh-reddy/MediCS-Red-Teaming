@@ -8,6 +8,7 @@ Saves adapter to checkpoints/sft/round_1/final/
 """
 
 import argparse
+import inspect
 import json
 import random
 import sys
@@ -22,6 +23,83 @@ from peft import LoraConfig, get_peft_model, TaskType, PeftModel
 from trl import SFTTrainer, SFTConfig
 
 from medics.utils import load_config, load_dotenv
+
+
+def _resolve_compute_dtype(cfg):
+    """Resolve 4-bit compute dtype from config with safe GPU fallback."""
+    name = str(cfg["target_model"].get("compute_dtype", "bfloat16")).strip().lower()
+    mapping = {
+        "bfloat16": torch.bfloat16,
+        "bf16": torch.bfloat16,
+        "float16": torch.float16,
+        "fp16": torch.float16,
+        "float32": torch.float32,
+        "fp32": torch.float32,
+    }
+    dtype = mapping.get(name, torch.bfloat16)
+    label = "bfloat16" if dtype == torch.bfloat16 else "float16" if dtype == torch.float16 else "float32"
+
+    if dtype == torch.bfloat16 and torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        print("Requested compute_dtype=bfloat16 but GPU lacks BF16 support; falling back to float16.")
+        return torch.float16, "float16"
+    return dtype, label
+
+
+def _resolve_training_precision(train_cfg, compute_dtype):
+    """Choose trainer precision flags from compute dtype + config."""
+    use_bf16 = (
+        compute_dtype == torch.bfloat16
+        and torch.cuda.is_available()
+        and torch.cuda.is_bf16_supported()
+    )
+    use_fp16 = bool(train_cfg.get("fp16", True)) and not use_bf16 and compute_dtype != torch.float32
+    return use_bf16, use_fp16
+
+
+def _build_sft_config_kwargs(train_cfg, output_dir, use_bf16, use_fp16):
+    """Build SFTConfig kwargs compatible across TRL versions."""
+    sig = inspect.signature(SFTConfig.__init__)
+    params = set(sig.parameters.keys())
+
+    kwargs = {
+        "output_dir": output_dir,
+        "num_train_epochs": train_cfg["num_epochs"],
+        "per_device_train_batch_size": train_cfg["per_device_batch_size"],
+        "gradient_accumulation_steps": train_cfg["gradient_accumulation_steps"],
+        "learning_rate": train_cfg["learning_rate"],
+        "lr_scheduler_type": train_cfg.get("lr_scheduler", "cosine"),
+        "warmup_ratio": train_cfg.get("warmup_ratio", 0.1),
+        "weight_decay": train_cfg.get("weight_decay", 0.01),
+        "logging_steps": train_cfg.get("logging_steps", 10),
+        "save_strategy": train_cfg.get("save_strategy", "epoch"),
+        "save_total_limit": train_cfg.get("save_total_limit", 2),
+        "load_best_model_at_end": train_cfg.get("load_best_model_at_end", True),
+        "gradient_checkpointing": train_cfg.get("gradient_checkpointing", True),
+        "seed": train_cfg.get("seed", 42),
+    }
+    if "bf16" in params:
+        kwargs["bf16"] = use_bf16
+    if "fp16" in params:
+        kwargs["fp16"] = use_fp16
+
+    # TRL naming differences across versions
+    eval_strategy = train_cfg.get("eval_strategy", "epoch")
+    if "eval_strategy" in params:
+        kwargs["eval_strategy"] = eval_strategy
+    elif "evaluation_strategy" in params:
+        kwargs["evaluation_strategy"] = eval_strategy
+
+    max_seq_length = train_cfg.get("max_seq_length", 1024)
+    if "max_seq_length" in params:
+        kwargs["max_seq_length"] = max_seq_length
+    elif "max_length" in params:
+        kwargs["max_length"] = max_seq_length
+
+    if "dataset_text_field" in params:
+        kwargs["dataset_text_field"] = "text"
+
+    # Drop args unsupported by installed TRL.
+    return {k: v for k, v in kwargs.items() if k in params}
 
 
 def main():
@@ -49,15 +127,19 @@ def main():
     sft_cfg = cfg["defense"]["sft"]
     lora_cfg = sft_cfg["lora"]
     train_cfg = sft_cfg["training"]
+    compute_dtype, dtype_label = _resolve_compute_dtype(cfg)
+    use_bf16, use_fp16 = _resolve_training_precision(train_cfg, compute_dtype)
 
     print(f"=== QLoRA-SFT Training: Round {args.round} ===")
     print(f"Model: {model_id}")
+    print(f"4-bit compute dtype: {dtype_label}")
+    print(f"Trainer precision: bf16={use_bf16} fp16={use_fp16}")
 
     # --- Load model (4-bit) ---
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=compute_dtype,
         bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     model = AutoModelForCausalLM.from_pretrained(
@@ -114,34 +196,23 @@ def main():
     output_dir = f"checkpoints/sft/round_{args.round}"
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    config = SFTConfig(
-        output_dir=output_dir,
-        num_train_epochs=train_cfg["num_epochs"],
-        per_device_train_batch_size=train_cfg["per_device_batch_size"],
-        gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
-        learning_rate=train_cfg["learning_rate"],
-        lr_scheduler_type=train_cfg.get("lr_scheduler", "cosine"),
-        warmup_ratio=train_cfg.get("warmup_ratio", 0.1),
-        weight_decay=train_cfg.get("weight_decay", 0.01),
-        fp16=train_cfg.get("fp16", True),
-        logging_steps=train_cfg.get("logging_steps", 10),
-        eval_strategy=train_cfg.get("eval_strategy", "epoch"),
-        save_strategy=train_cfg.get("save_strategy", "epoch"),
-        save_total_limit=train_cfg.get("save_total_limit", 2),
-        load_best_model_at_end=train_cfg.get("load_best_model_at_end", True),
-        gradient_checkpointing=train_cfg.get("gradient_checkpointing", True),
-        max_seq_length=train_cfg.get("max_seq_length", 1024),
-        dataset_text_field="text",
-        seed=train_cfg.get("seed", 42),
-    )
+    config_kwargs = _build_sft_config_kwargs(train_cfg, output_dir, use_bf16, use_fp16)
+    print(f"SFTConfig args: {sorted(config_kwargs.keys())}")
+    config = SFTConfig(**config_kwargs)
 
-    trainer = SFTTrainer(
+    # TRL >=0.15 renamed 'tokenizer' to 'processing_class'
+    trainer_kwargs = dict(
         model=model,
         args=config,
         train_dataset=train_ds,
         eval_dataset=eval_ds,
-        tokenizer=tokenizer,
     )
+    sig = inspect.signature(SFTTrainer.__init__)
+    if "processing_class" in sig.parameters:
+        trainer_kwargs["processing_class"] = tokenizer
+    else:
+        trainer_kwargs["tokenizer"] = tokenizer
+    trainer = SFTTrainer(**trainer_kwargs)
     result = trainer.train()
     trainer.save_model(f"{output_dir}/final")
     tokenizer.save_pretrained(f"{output_dir}/final")
