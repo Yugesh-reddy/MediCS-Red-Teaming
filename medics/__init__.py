@@ -34,4 +34,4 @@ Usage:
     from medics.ethics import generate_ethics_statement, format_ethics_section
 """
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
