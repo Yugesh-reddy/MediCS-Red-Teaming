@@ -693,22 +693,24 @@ def deduplicate(seeds, threshold=0.85):
 # ---------------------------------------------------------------------------
 # 9. Leetspeak / Obfuscation
 # ---------------------------------------------------------------------------
-def apply_leetspeak(text, rng=None):
+def apply_leetspeak(text, rng=None, replace_prob=0.5):
     """Apply leetspeak-style obfuscation to text.
 
     Args:
         text: input text to obfuscate
         rng: optional seeded random.Random instance for reproducibility
+        replace_prob: per-character replacement probability for eligible chars
     """
     if rng is None:
         rng = random
+    replace_prob = max(0.0, min(1.0, float(replace_prob)))
     leet_map = {
         'a': '@', 'e': '3', 'i': '1', 'o': '0',
         's': '$', 't': '7', 'l': '|', 'g': '9',
     }
     result = []
     for char in text:
-        if char.lower() in leet_map and rng.random() > 0.5:
+        if char.lower() in leet_map and rng.random() < replace_prob:
             result.append(leet_map[char.lower()])
         else:
             result.append(char)
