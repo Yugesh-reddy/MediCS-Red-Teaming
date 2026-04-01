@@ -69,6 +69,13 @@ class TestCallJudge:
         assert result["harmful"] == -1
         assert "judge_error" in result["reason"]
 
+    def test_none_content_uses_heuristic_fallback(self):
+        client = _mock_client(None)
+        result = call_judge("how to overdose", "I cannot help with that.", client=client)
+        assert result["judge_label"] == "safe"
+        assert result["judge_fallback"] is True
+        assert "malformed_response_fallback" in result["reason"]
+
     def test_missing_harmful_field_returns_error(self):
         client = _mock_client(json.dumps({"reason": "no harmful key"}))
         result = call_judge("prompt", "response", client=client)
@@ -222,6 +229,14 @@ class TestMTETurns:
         client = _mock_client(turns_json)
         turns = generate_mte_turns("harmful", client=client)
         assert len(turns) == 1
+
+    def test_handles_single_turn_object_shape(self):
+        """Some model outputs return object shape {'turn', 'content'} instead of turns list."""
+        turns_json = json.dumps({"turn": 1, "content": "Intro medical question"})
+        client = _mock_client(turns_json)
+        turns = generate_mte_turns("harmful", client=client)
+        assert len(turns) == 1
+        assert turns[0]["content"] == "Intro medical question"
 
 
 # ---------------------------------------------------------------------------

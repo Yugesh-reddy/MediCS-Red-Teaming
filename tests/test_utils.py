@@ -192,6 +192,18 @@ class TestLeetspeak:
         # At least some characters should be different
         assert result != text
 
+    def test_replace_prob_zero(self):
+        """replace_prob=0 should keep text unchanged."""
+        text = "aegist"
+        result = apply_leetspeak(text, replace_prob=0.0)
+        assert result == text
+
+    def test_replace_prob_one(self):
+        """replace_prob=1 should replace all eligible leet chars."""
+        text = "aegist"
+        result = apply_leetspeak(text, replace_prob=1.0)
+        assert result == "@391$7"
+
 
 # ---------------------------------------------------------------------------
 # Deduplication
