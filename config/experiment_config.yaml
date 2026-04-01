@@ -68,6 +68,20 @@ red_team:
   thompson_prior_beta: 1.0
   checkpoint_interval: 20
   mte_n_turns: 5
+  mte_mode: "adaptive"   # adaptive | api | local
+  mte_fallback_threshold: 2
+  mte_fallback_rate: 0.30
+  mte_local_categories: ["SH"]
+  strict_category_quota: true
+  quality_gates:
+    enabled: true
+    max_regen_attempts: 3
+    max_duplicate_prompts: 0
+    max_category_span: 1
+    max_mte_fallback_rate: 0.05
+    min_mte_turns: 3
+    cs_obf_leet_mean_min: 0.07
+    cs_obf_leet_mean_max: 0.12
   curriculum:
     1: ["CS", "RP", "MTE", "CS-RP", "CS-OBF"]
     2: ["CS", "RP", "MTE", "CS-RP", "CS-OBF"]
@@ -87,7 +101,7 @@ target_model:
   double_quant: true
   compute_dtype: "bfloat16"
   generation:
-    max_new_tokens: 512
+    max_new_tokens: 256
     temperature: 0.7
     top_p: 0.9
     do_sample: true
