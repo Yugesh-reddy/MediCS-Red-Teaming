@@ -23,6 +23,26 @@ from medics.utils import load_jsonl, save_jsonl, load_config, load_dotenv
 from medics.defense import BASE_SYSTEM_PROMPT, DEFENSE_SYSTEM_PROMPT
 
 
+def _resolve_compute_dtype(cfg):
+    """Resolve 4-bit compute dtype from config with safe GPU fallback."""
+    name = str(cfg["target_model"].get("compute_dtype", "bfloat16")).strip().lower()
+    mapping = {
+        "bfloat16": torch.bfloat16,
+        "bf16": torch.bfloat16,
+        "float16": torch.float16,
+        "fp16": torch.float16,
+        "float32": torch.float32,
+        "fp32": torch.float32,
+    }
+    dtype = mapping.get(name, torch.bfloat16)
+    label = "bfloat16" if dtype == torch.bfloat16 else "float16" if dtype == torch.float16 else "float32"
+
+    if dtype == torch.bfloat16 and torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        print("Requested compute_dtype=bfloat16 but GPU lacks BF16 support; falling back to float16.")
+        return torch.float16, "float16"
+    return dtype, label
+
+
 def _select_system_prompt(checkpoint):
     """Default: BASE prompt for all checkpoints.
 
@@ -36,10 +56,12 @@ def _select_system_prompt(checkpoint):
 
 def load_model(model_id, checkpoint, cfg):
     """Load model with optional adapter."""
+    compute_dtype, dtype_label = _resolve_compute_dtype(cfg)
+    print(f"4-bit compute dtype: {dtype_label}")
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=compute_dtype,
         bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     model = AutoModelForCausalLM.from_pretrained(
@@ -49,7 +71,25 @@ def load_model(model_id, checkpoint, cfg):
 
     if checkpoint != "base":
         print(f"Loading adapter: {checkpoint}")
-        model = PeftModel.from_pretrained(model, checkpoint)
+        ckpt_path = Path(checkpoint)
+        if ckpt_path.exists():
+            adapter_cfg = ckpt_path / "adapter_config.json"
+            if not adapter_cfg.exists():
+                raise FileNotFoundError(
+                    f"Adapter checkpoint found at {checkpoint}, but {adapter_cfg} is missing. "
+                    "Training likely failed before saving the final adapter."
+                )
+            model = PeftModel.from_pretrained(model, str(ckpt_path))
+        else:
+            # Allow HF repo IDs, but provide a clear message if loading fails.
+            try:
+                model = PeftModel.from_pretrained(model, checkpoint)
+            except Exception as e:
+                raise FileNotFoundError(
+                    f"Could not load adapter '{checkpoint}'. "
+                    "If this is a local path, ensure SFT training completed and "
+                    "checkpoints/sft/round_X/final contains adapter_config.json."
+                ) from e
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -133,45 +173,137 @@ def _generate_multi_turn(model, tokenizer, turns, gen_cfg, system_prompt=None):
     return response
 
 
+def _batch_generate_single_turn(model, tokenizer, batch_items, gen_cfg, system_prompt=None):
+    """Batched single-turn inference for prompts WITHOUT assistant_prefix.
+
+    Pads from the left (standard for decoder-only generation) and generates
+    all sequences in one forward pass.
+    """
+    # Build chat-templated texts
+    texts = []
+    for prompt_data in batch_items:
+        prompt = (prompt_data.get("attack_prompt") or
+                  prompt_data.get("prompt", ""))
+        messages = [
+            {"role": "system", "content": system_prompt or BASE_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+        text = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        texts.append(text)
+
+    # Left-pad for batched generation
+    tokenizer.padding_side = "left"
+    inputs = tokenizer(texts, return_tensors="pt", padding=True).to(model.device)
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=gen_cfg.get("max_new_tokens", 512),
+            do_sample=gen_cfg.get("do_sample", True),
+            temperature=gen_cfg.get("temperature", 0.7),
+            top_p=gen_cfg.get("top_p", 0.9),
+            repetition_penalty=gen_cfg.get("repetition_penalty", 1.0),
+        )
+
+    # Decode only generated tokens (skip input)
+    responses = []
+    for i, output in enumerate(outputs):
+        generated = output[inputs.input_ids.shape[1]:]
+        responses.append(tokenizer.decode(generated, skip_special_tokens=True))
+    return responses
+
+
 def run_inference(model, tokenizer, prompts, gen_cfg,
-                  system_prompt=None, system_prompt_mode="auto"):
+                  system_prompt=None, system_prompt_mode="auto",
+                  output_path=None, resume_from=0, existing_results=None):
     """Run inference on a batch of prompts. Handles both single and multi-turn.
+
+    Batches single-turn prompts without assistant_prefix for ~3-4x speedup.
+    Saves incrementally every 25 prompts to avoid losing progress on crash.
 
     Args:
         system_prompt_mode: recorded in every output row for traceability
             ("base", "defense", or "auto").
+        output_path: if set, saves partial results every 25 prompts.
+        resume_from: skip this many already-completed prompts (for resume).
+        existing_results: prior rows loaded from .partial (for safe resume).
     """
     import time
-    results = []
+    BATCH_SIZE = 8
+
+    existing_results = list(existing_results or [])
+    if resume_from >= len(prompts):
+        return existing_results
+
+    new_results = []
     start = time.time()
-    for i, prompt_data in enumerate(prompts):
-        is_multi_turn = prompt_data.get("is_multi_turn", False)
-        attack_turns = prompt_data.get("attack_turns", [])
+    prompts = prompts[resume_from:]
+    i = 0
 
-        if is_multi_turn and attack_turns and len(attack_turns) > 1:
-            # Actual multi-turn conversation
-            response = _generate_multi_turn(model, tokenizer, attack_turns, gen_cfg, system_prompt)
-        else:
-            # Single-turn (CS, RP, CS-RP, CS-OBF, or MTE fallback)
-            prompt = (prompt_data.get("attack_prompt") or
-                      prompt_data.get("prompt", ""))
-            prefix = prompt_data.get("assistant_prefix")
-            response = _generate_single_turn(
-                model, tokenizer, prompt, gen_cfg, system_prompt, prefix
+    while i < len(prompts):
+        # Collect a batch of single-turn prompts without prefix
+        batch_items = []
+        while (i + len(batch_items) < len(prompts)
+               and len(batch_items) < BATCH_SIZE):
+            pd = prompts[i + len(batch_items)]
+            is_mt = pd.get("is_multi_turn", False) and len(pd.get("attack_turns", [])) > 1
+            has_prefix = pd.get("assistant_prefix") is not None
+            if is_mt or has_prefix:
+                break
+            batch_items.append(pd)
+
+        if batch_items:
+            # Batched generation
+            responses = _batch_generate_single_turn(
+                model, tokenizer, batch_items, gen_cfg, system_prompt
             )
+            for pd, resp in zip(batch_items, responses):
+                result = {**pd, "model_response": resp,
+                          "system_prompt_mode": system_prompt_mode}
+                new_results.append(result)
+                existing_results.append(result)
+            i += len(batch_items)
+        else:
+            # Single item: multi-turn or has assistant_prefix
+            prompt_data = prompts[i]
+            is_multi_turn = prompt_data.get("is_multi_turn", False)
+            attack_turns = prompt_data.get("attack_turns", [])
 
-        result = {**prompt_data, "model_response": response,
-                  "system_prompt_mode": system_prompt_mode}
-        results.append(result)
+            if is_multi_turn and attack_turns and len(attack_turns) > 1:
+                response = _generate_multi_turn(
+                    model, tokenizer, attack_turns, gen_cfg, system_prompt
+                )
+            else:
+                prompt = (prompt_data.get("attack_prompt") or
+                          prompt_data.get("prompt", ""))
+                prefix = prompt_data.get("assistant_prefix")
+                response = _generate_single_turn(
+                    model, tokenizer, prompt, gen_cfg, system_prompt, prefix
+                )
 
-        if (i + 1) % 25 == 0:
+            result = {**prompt_data, "model_response": response,
+                      "system_prompt_mode": system_prompt_mode}
+            new_results.append(result)
+            existing_results.append(result)
+            i += 1
+
+        total_done = resume_from + len(new_results)
+        total_all = resume_from + len(prompts)
+        if len(new_results) > 0 and (len(new_results) % 25 < BATCH_SIZE or i >= len(prompts)):
             elapsed = time.time() - start
-            per_prompt = elapsed / (i + 1)
-            remaining = per_prompt * (len(prompts) - i - 1)
-            print(f"  [{i+1}/{len(prompts)}] processed "
+            per_prompt = elapsed / len(new_results)
+            remaining = per_prompt * (len(prompts) - len(new_results))
+            print(f"  [{total_done}/{total_all}] processed "
                   f"({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)")
 
-    return results
+            # Incremental save
+            if output_path:
+                from medics.utils import save_jsonl
+                save_jsonl(existing_results, output_path + ".partial")
+                print(f"    checkpoint saved → {output_path}.partial")
+
+    return existing_results
 
 
 def main():
@@ -233,14 +365,45 @@ def main():
     print(f"Seed: {args.seed}")
     print(f"Input: {args.input}")
 
-    model, tokenizer = load_model(model_id, args.checkpoint, cfg)
     prompts = load_jsonl(args.input)
-    print(f"Loaded {len(prompts)} prompts")
 
+    # Resume support: check for partial results
+    partial = []
+    resume_from = 0
+    partial_path = args.output + ".partial"
+    if Path(partial_path).exists():
+        partial = load_jsonl(partial_path)
+        resume_from = len(partial)
+        if resume_from > len(prompts):
+            print("WARNING: partial file has more rows than input; ignoring stale partial.")
+            partial = []
+            resume_from = 0
+        elif resume_from == len(prompts):
+            print(f"Partial already complete ({resume_from}/{len(prompts)}). Finalizing output.")
+            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+            save_jsonl(partial, args.output)
+            partial_file = Path(partial_path)
+            if partial_file.exists():
+                partial_file.unlink()
+            print(f"\nInference done: {len(partial)} responses → {args.output}")
+            return
+        else:
+            print(f"Resuming from {resume_from}/{len(prompts)} (partial file found)")
+    else:
+        print(f"Loaded {len(prompts)} prompts")
+
+    model, tokenizer = load_model(model_id, args.checkpoint, cfg)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     results = run_inference(model, tokenizer, prompts, gen_cfg, system_prompt,
-                            system_prompt_mode=prompt_mode)
+                            system_prompt_mode=prompt_mode,
+                            output_path=args.output, resume_from=resume_from,
+                            existing_results=partial)
+
     save_jsonl(results, args.output)
+    # Clean up partial file
+    partial_file = Path(partial_path)
+    if partial_file.exists():
+        partial_file.unlink()
     print(f"\nInference done: {len(results)} responses → {args.output}")
 
 

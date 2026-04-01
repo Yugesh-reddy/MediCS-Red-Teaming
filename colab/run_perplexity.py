@@ -24,6 +24,26 @@ from medics.detection import compute_perplexity_batch, perplexity_detector, dete
 from medics.utils import load_jsonl, save_json, load_config, load_dotenv
 
 
+def _resolve_compute_dtype(cfg):
+    """Resolve 4-bit compute dtype from config with safe GPU fallback."""
+    name = str(cfg["target_model"].get("compute_dtype", "bfloat16")).strip().lower()
+    mapping = {
+        "bfloat16": torch.bfloat16,
+        "bf16": torch.bfloat16,
+        "float16": torch.float16,
+        "fp16": torch.float16,
+        "float32": torch.float32,
+        "fp32": torch.float32,
+    }
+    dtype = mapping.get(name, torch.bfloat16)
+    label = "bfloat16" if dtype == torch.bfloat16 else "float16" if dtype == torch.float16 else "float32"
+
+    if dtype == torch.bfloat16 and torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        print("Requested compute_dtype=bfloat16 but GPU lacks BF16 support; falling back to float16.")
+        return torch.float16, "float16"
+    return dtype, label
+
+
 def main():
     parser = argparse.ArgumentParser(description="Perplexity detection baseline")
     parser.add_argument("--checkpoint", default="base",
@@ -56,12 +76,14 @@ def main():
 
     cfg = load_config(args.config)
     model_id = cfg["target_model"]["model_id"]
+    compute_dtype, dtype_label = _resolve_compute_dtype(cfg)
 
     checkpoint = args.checkpoint
 
     print(f"=== Perplexity Detection Baseline ===")
     print(f"Model: {model_id}")
     print(f"Checkpoint: {checkpoint}")
+    print(f"4-bit compute dtype: {dtype_label}")
     print(f"CS input: {args.input}")
     print(f"EN input: {args.english_input}")
 
@@ -70,7 +92,7 @@ def main():
         load_in_4bit=True,
         bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
         bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=compute_dtype,
     )
     model = AutoModelForCausalLM.from_pretrained(
         model_id, quantization_config=bnb_config, device_map="auto",
@@ -78,7 +100,16 @@ def main():
     if checkpoint != "base":
         from peft import PeftModel
         print(f"Loading adapter: {checkpoint}")
-        model = PeftModel.from_pretrained(model, checkpoint)
+        ckpt_path = Path(checkpoint)
+        if ckpt_path.exists():
+            adapter_cfg = ckpt_path / "adapter_config.json"
+            if not adapter_cfg.exists():
+                raise FileNotFoundError(
+                    f"Adapter checkpoint found at {checkpoint}, but {adapter_cfg} is missing."
+                )
+            model = PeftModel.from_pretrained(model, str(ckpt_path))
+        else:
+            model = PeftModel.from_pretrained(model, checkpoint)
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     if tokenizer.pad_token is None:

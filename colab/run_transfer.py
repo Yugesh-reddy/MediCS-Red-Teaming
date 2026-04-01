@@ -27,6 +27,26 @@ from medics.utils import load_jsonl, save_jsonl, load_config, load_dotenv
 from medics.defense import BASE_SYSTEM_PROMPT, DEFENSE_SYSTEM_PROMPT
 
 
+def _resolve_compute_dtype(cfg):
+    """Resolve 4-bit compute dtype from config with safe GPU fallback."""
+    name = str(cfg["target_model"].get("compute_dtype", "bfloat16")).strip().lower()
+    mapping = {
+        "bfloat16": torch.bfloat16,
+        "bf16": torch.bfloat16,
+        "float16": torch.float16,
+        "fp16": torch.float16,
+        "float32": torch.float32,
+        "fp32": torch.float32,
+    }
+    dtype = mapping.get(name, torch.bfloat16)
+    label = "bfloat16" if dtype == torch.bfloat16 else "float16" if dtype == torch.float16 else "float32"
+
+    if dtype == torch.bfloat16 and torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        print("Requested compute_dtype=bfloat16 but GPU lacks BF16 support; falling back to float16.")
+        return torch.float16, "float16"
+    return dtype, label
+
+
 def main():
     parser = argparse.ArgumentParser(description="Mistral-7B transfer evaluation")
     parser.add_argument("--input", required=True,
@@ -61,6 +81,7 @@ def main():
     cfg = load_config(args.config)
     transfer_model = args.model or cfg["transfer"]["model_id"]
     gen_cfg = cfg["target_model"].get("generation", {})
+    compute_dtype, dtype_label = _resolve_compute_dtype(cfg)
 
     # System prompt: explicit override > default (base)
     if args.system_prompt == "defense":
@@ -74,6 +95,7 @@ def main():
 
     print(f"=== Transfer Evaluation: Mistral-7B ===")
     print(f"Model: {transfer_model}")
+    print(f"4-bit compute dtype: {dtype_label}")
     print(f"System prompt: {prompt_type}")
     print(f"Seed: {args.seed}")
     print(f"Input: {args.input}")
@@ -82,7 +104,7 @@ def main():
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=compute_dtype,
         bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     model = AutoModelForCausalLM.from_pretrained(
