@@ -12,5 +12,33 @@
     "duration_min": 51.13,
     "gpu": false,
     "timestamp": "2026-03-29 23:26:45"
+  },
+  {
+    "phase": "Attack Round (Round 1 generate)",
+    "duration_sec": 294.74,
+    "duration_min": 4.91,
+    "gpu": false,
+    "timestamp": "2026-03-30 19:54:49"
+  },
+  {
+    "phase": "Inference (Round 1 base model)",
+    "duration_sec": 8850.65,
+    "duration_min": 147.51,
+    "gpu": true,
+    "timestamp": "2026-03-31 00:00:55"
+  },
+  {
+    "phase": "Attack Round (Round 1 judge)",
+    "duration_sec": 243.64,
+    "duration_min": 4.06,
+    "gpu": false,
+    "timestamp": "2026-03-31 00:10:20"
+  },
+  {
+    "phase": "Attack Round (Round 2 generate)",
+    "duration_sec": 151.21,
+    "duration_min": 2.52,
+    "gpu": false,
+    "timestamp": "2026-04-01 03:25:18"
   }
 ]
