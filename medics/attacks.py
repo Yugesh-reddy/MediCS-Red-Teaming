@@ -109,7 +109,9 @@ def _build_cs_obf_prompt(text: str, rng: random.Random) -> str:
     prompts unreadable. Just enough character substitution to fragment
     safety-critical tokens in the tokenizer without destroying readability.
     """
-    return apply_leetspeak(_append_directives(text, rng), rng=rng)
+    # Slightly lower substitution rate keeps prompts readable while still
+    # fragmenting safety-critical tokens.
+    return apply_leetspeak(_append_directives(text, rng), rng=rng, replace_prob=0.30)
 
 
 # ---------------------------------------------------------------------------
@@ -241,13 +243,33 @@ def _local_mte_turns(prompt: str, n_turns: int,
     return turns
 
 
+def _normalize_mte_mode(mode: str) -> str:
+    mode = (mode or "adaptive").strip().lower()
+    return mode if mode in {"adaptive", "api", "local"} else "adaptive"
+
+
+def _ensure_mte_state(state: Optional[dict]) -> dict:
+    if state is None:
+        state = {}
+    state.setdefault("api_attempts", 0)
+    state.setdefault("fallbacks", 0)
+    state.setdefault("force_local", False)
+    state.setdefault("notified", False)
+    return state
+
+
 # ---------------------------------------------------------------------------
 # Strategy Application
 # ---------------------------------------------------------------------------
 def apply_strategy(seed: dict, strategy: Strategy,
                    keywords: dict, language: str,
                    rng: Optional[random.Random] = None,
-                   mte_n_turns: int = 5) -> dict:
+                   mte_n_turns: int = 5,
+                   mte_mode: str = "adaptive",
+                   mte_state: Optional[dict] = None,
+                   mte_fallback_threshold: int = 1,
+                   mte_fallback_rate: float = 0.10,
+                   mte_local_categories: Optional[list[str]] = None) -> dict:
     """
     Apply an attack strategy to a seed prompt.
     Returns the transformed attack prompt ready for inference.
@@ -259,6 +281,11 @@ def apply_strategy(seed: dict, strategy: Strategy,
         language: target language code
         rng: optional seeded Random instance for reproducibility
         mte_n_turns: number of escalation turns for MTE
+        mte_mode: "adaptive" (default), "api", or "local"
+        mte_state: optional mutable dict to persist MTE fallback state across calls
+        mte_fallback_threshold: minimum fallback count to trigger adaptive local mode
+        mte_fallback_rate: fallback rate threshold (0-1) to trigger adaptive local mode
+        mte_local_categories: categories that should always use local MTE (default: ["SH"])
 
     Returns:
         dict with 'attack_prompt', 'strategy', 'language', and original seed fields
@@ -287,23 +314,73 @@ def apply_strategy(seed: dict, strategy: Strategy,
         }
 
     elif strategy == "MTE":
-        # Multi-turn escalation. Supports forced local mode to avoid slow API dependency.
+        # Multi-turn escalation with adaptive API->local fallback circuit-breaker.
         category = seed.get("category", "")
-        force_local = os.environ.get("MEDICS_LOCAL_MTE", "").lower() in {"1", "true", "yes"}
-        if force_local:
-            turns = [{"role": "user", "content": prompt}]
+        mode = _normalize_mte_mode(mte_mode)
+        force_local_env = os.environ.get("MEDICS_LOCAL_MTE", "").lower() in {"1", "true", "yes"}
+        state = _ensure_mte_state(mte_state)
+        env_local_cats = os.environ.get("MEDICS_MTE_LOCAL_CATEGORIES", "").strip()
+        if env_local_cats:
+            local_categories = {c.strip().upper() for c in env_local_cats.split(",") if c.strip()}
+        elif mte_local_categories is None:
+            local_categories = {"SH"}
         else:
-            try:
-                turns = generate_mte_turns(prompt, n_turns=mte_n_turns)
-            except Exception as e:
-                print(f"  MTE generation unavailable ({e}); using local fallback turns.")
-                turns = [{"role": "user", "content": prompt}]
-        # Detect fallback from API helper and replace with deterministic local turns.
-        is_fallback = (
-            len(turns) == 1 and turns[0].get("content", "").strip() == prompt.strip()
+            local_categories = {str(c).strip().upper() for c in mte_local_categories if str(c).strip()}
+        always_local_for_category = str(category).strip().upper() in local_categories
+
+        use_local = (
+            force_local_env
+            or mode == "local"
+            or always_local_for_category
+            or (mode == "adaptive" and state.get("force_local"))
         )
-        if is_fallback:
+
+        if use_local:
             turns = _local_mte_turns(prompt, mte_n_turns, category)
+            is_fallback = False
+            mte_source = "local"
+        else:
+            state["api_attempts"] = int(state.get("api_attempts", 0)) + 1
+            turns = generate_mte_turns(prompt, n_turns=mte_n_turns)
+
+            # generate_mte_turns returns a single-turn copy of prompt on API failure.
+            is_fallback = (
+                len(turns) == 1 and turns[0].get("content", "").strip() == prompt.strip()
+            )
+            if is_fallback:
+                state["fallbacks"] = int(state.get("fallbacks", 0)) + 1
+                turns = _local_mte_turns(prompt, mte_n_turns, category)
+                mte_source = "local_fallback"
+
+                # Adaptive mode: if fallbacks are frequent, stop calling API for this run.
+                if mode == "adaptive":
+                    attempts = max(1, int(state.get("api_attempts", 0)))
+                    fallbacks = int(state.get("fallbacks", 0))
+                    threshold = max(
+                        1,
+                        int(
+                            os.environ.get(
+                                "MEDICS_MTE_FALLBACK_THRESHOLD",
+                                str(mte_fallback_threshold),
+                            )
+                        ),
+                    )
+                    max_rate = float(
+                        os.environ.get("MEDICS_MTE_FALLBACK_RATE", str(mte_fallback_rate))
+                    )
+                    max_rate = max(0.0, min(1.0, max_rate))
+                    if fallbacks >= threshold and (fallbacks / attempts) >= max_rate:
+                        state["force_local"] = True
+                        if not state.get("notified"):
+                            print(
+                                "  MTE: API fallback rate "
+                                f"{fallbacks}/{attempts} ({fallbacks/attempts:.0%}); "
+                                "switching remaining MTE prompts to local scaffolds."
+                            )
+                            state["notified"] = True
+            else:
+                mte_source = "api"
+
         turn_text = "\n".join([f"[Turn {i+1}]: {t['content']}" for i, t in enumerate(turns)])
         return {
             "attack_prompt": turn_text,
@@ -312,6 +389,7 @@ def apply_strategy(seed: dict, strategy: Strategy,
             "strategy": "MTE",
             "is_multi_turn": True,
             "mte_fallback": is_fallback,
+            "mte_source": mte_source,
             "n_turns": len(turns),
             "language": "en",
             "seed_id": seed.get("seed_id", ""),
