@@ -14,7 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from medics.defense import build_sft_data, build_dpo_pairs  # pyre-ignore[21]
+from medics.defense import (  # pyre-ignore[21]
+    build_sft_data, build_dpo_pairs, rebuild_sft_from_cache,
+)
 from medics.utils import load_jsonl, save_json, load_json  # pyre-ignore[21]
 
 
@@ -23,6 +25,10 @@ def main():
     parser.add_argument("--rounds", type=str, required=True,
                         help="Comma-separated round numbers: 1 or 1,2,3")
     parser.add_argument("--type", choices=["sft", "dpo"], required=True)
+    parser.add_argument("--force", action="store_true",
+                        help="Rebuild even if output file already exists")
+    parser.add_argument("--rebuild-from-cache", action="store_true",
+                        help="Rebuild SFT data from cached refusals/helpful ($0 API)")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
 
@@ -32,6 +38,15 @@ def main():
     Path("data/defense").mkdir(parents=True, exist_ok=True)
 
     if args.type == "sft":
+        # Skip if output already exists (avoids re-spending API on refusals/helpful)
+        output_path = Path(f"data/defense/sft_round_{'_'.join(map(str, rounds))}.json")
+        if output_path.exists() and not args.force:
+            import json
+            with open(output_path) as f:
+                existing = json.load(f)
+            print(f"SFT data already exists: {output_path} ({len(existing)} examples)")
+            print("Skipping rebuild (use --force to regenerate)")
+            return
         # Collect jailbreaks from specified rounds
         all_jailbreaks = []
         for r in rounds:
@@ -44,14 +59,30 @@ def main():
         benign_twins = load_jsonl("data/seeds/benign_twins.jsonl")
         print(f"Benign twins: {len(benign_twins)}")
 
-        sft_data, refusal_map = build_sft_data(all_jailbreaks, benign_twins)
+        if args.rebuild_from_cache:
+            # Rebuild using cached refusals/helpful — $0 API for cached items
+            cached_refusals = load_json("data/defense/refusals.json") or {}
+            cached_helpful = load_json("data/defense/helpful_targets.json") or {}
+            print(f"Cache: {len(cached_refusals)} refusals, "
+                  f"{len(cached_helpful)} helpful responses")
+            sft_data, refusal_map = rebuild_sft_from_cache(
+                all_jailbreaks, benign_twins, cached_refusals, cached_helpful
+            )
+        else:
+            sft_data, refusal_map = build_sft_data(all_jailbreaks, benign_twins)
         output_path = f"data/defense/sft_round_{'_'.join(map(str, rounds))}.json"
         save_json(sft_data, output_path)
         print(f"SFT data saved: {output_path} ({len(sft_data)} examples)")
 
-        # Save refusal map for DPO reuse
-        save_json(refusal_map, "data/defense/refusals.json")
-        print(f"Refusal map saved: data/defense/refusals.json ({len(refusal_map)} entries)")
+        # Save refusal map for DPO reuse (merge with existing cache across rounds)
+        existing_refusals = load_json("data/defense/refusals.json") or {}
+        existing_refusals.update(refusal_map)
+        save_json(existing_refusals, "data/defense/refusals.json")
+        prompt_specific = sum(1 for k in existing_refusals if "::" in str(k))
+        legacy_seed = len(existing_refusals) - prompt_specific
+        print("Refusal map saved: data/defense/refusals.json "
+              f"({len(existing_refusals)} entries: {prompt_specific} prompt-specific, "
+              f"{legacy_seed} legacy seed_id)")
 
         # Save helpful targets for potential DPO over-refusal correction reuse
         helpful_targets = {}
@@ -65,10 +96,12 @@ def main():
             helpful = messages[2].get("content", "")
             if prompt and helpful:
                 helpful_targets[prompt] = helpful
-        save_json(helpful_targets, "data/defense/helpful_targets.json")
+        existing_helpful = load_json("data/defense/helpful_targets.json") or {}
+        existing_helpful.update(helpful_targets)
+        save_json(existing_helpful, "data/defense/helpful_targets.json")
         print(
             "Helpful targets saved: data/defense/helpful_targets.json "
-            f"({len(helpful_targets)} entries)"
+            f"({len(existing_helpful)} entries)"
         )
 
     elif args.type == "dpo":
