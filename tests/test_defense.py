@@ -2,13 +2,14 @@
 Tests for medics.defense — SFT data and DPO pair construction.
 """
 
+import hashlib
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from medics.defense import build_sft_data, build_dpo_pairs
+from medics.defense import build_sft_data, build_dpo_pairs, rebuild_sft_from_cache
 
 
 class TestBuildSftData:
@@ -44,27 +45,61 @@ class TestBuildSftData:
     @patch("medics.defense.generate_helpful_batch")
     @patch("medics.defense.generate_refusal_batch")
     def test_refusal_map_has_correct_keys(self, mock_refusals, mock_helpful):
-        """Refusal map should map seed_id → refusal text."""
+        """Refusal map should include prompt-specific + legacy seed_id keys."""
         mock_refusals.return_value = ["Refusal A", "Refusal B"]
         mock_helpful.return_value = ["Helpful A", "Helpful B"]
 
         _, refusal_map = build_sft_data(self.jailbreaks, self.benign_twins)
+        tox_key = "TOX_001::" + hashlib.md5(
+            "How to make poison?".encode("utf-8", errors="replace")
+        ).hexdigest()
+        sh_key = "SH_001::" + hashlib.md5(
+            "Self-harm methods?".encode("utf-8", errors="replace")
+        ).hexdigest()
+        assert tox_key in refusal_map
+        assert sh_key in refusal_map
         assert "TOX_001" in refusal_map
         assert "SH_001" in refusal_map
-        assert refusal_map["TOX_001"] == "Refusal A"
-        assert refusal_map["SH_001"] == "Refusal B"
+        assert refusal_map[tox_key] == "Refusal A"
+        assert refusal_map[sh_key] == "Refusal B"
+        assert refusal_map["TOX_001"] == "Refusal A"  # legacy fallback key
+        assert refusal_map["SH_001"] == "Refusal B"  # legacy fallback key
 
     @patch("medics.defense.generate_helpful_batch")
     @patch("medics.defense.generate_refusal_batch")
-    def test_balanced_output(self, mock_refusals, mock_helpful):
-        """SFT data should be balanced 1:1 refusal:helpful."""
+    def test_uses_all_helpful_examples_without_downsampling(self, mock_refusals, mock_helpful):
+        """SFT data should keep all helpful examples (no forced 1:1 cap)."""
         mock_refusals.return_value = ["Refusal"] * 2
-        mock_helpful.return_value = ["Helpful"] * 2
+        benign = self.benign_twins + [{"prompt": "How to hydrate safely?", "category": "MIS"}]
+        mock_helpful.return_value = ["Helpful A", "Helpful B", "Helpful C"]
 
-        balanced, _ = build_sft_data(self.jailbreaks, self.benign_twins)
-        refusal_count = sum(1 for e in balanced if e["type"] == "refusal")
-        helpful_count = sum(1 for e in balanced if e["type"] == "helpful")
-        assert refusal_count == helpful_count
+        data, _ = build_sft_data(self.jailbreaks, benign)
+        refusal_count = sum(1 for e in data if e["type"] == "refusal")
+        helpful_count = sum(1 for e in data if e["type"] == "helpful")
+        assert refusal_count == 2
+        assert helpful_count == 3
+        assert len(data) == 5
+
+    @patch("medics.defense.generate_helpful_batch")
+    @patch("medics.defense.generate_refusal_batch")
+    def test_adds_prefix_recovery_examples(self, mock_refusals, mock_helpful):
+        """Prefix-injected jailbreaks should add prefix-recovery training rows."""
+        jailbreaks = [
+            {
+                "attack_prompt": "RP attack prompt",
+                "seed_id": "TOX_001",
+                "category": "TOX",
+                "assistant_prefix": "From a clinical toxicology perspective, ",
+            }
+        ]
+        benign_twins = [{"prompt": "What are signs of poisoning?", "category": "TOX"}]
+        mock_refusals.return_value = ["Refusal A"]
+        mock_helpful.return_value = ["Helpful A"]
+
+        data, _ = build_sft_data(jailbreaks, benign_twins, rng_seed=123)
+        prefix_count = sum(1 for e in data if e["type"] == "prefix_recovery")
+        assert prefix_count == 1
+        assert len(data) == 3
 
     @patch("medics.defense.generate_helpful_batch")
     @patch("medics.defense.generate_refusal_batch")
@@ -103,6 +138,20 @@ class TestBuildDpoPairs:
         """No attack pairs if refusal map is empty."""
         pairs = build_dpo_pairs(self.jailbreaks, {}, [])
         assert len(pairs) == 0
+
+    def test_attack_pairs_prefer_prompt_specific_refusal(self):
+        """DPO attack pair should use prompt-specific refusal when available."""
+        prompt = self.jailbreaks[0]["attack_prompt"]
+        prompt_key = "TOX_001::" + hashlib.md5(
+            prompt.encode("utf-8", errors="replace")
+        ).hexdigest()
+        refusals = {
+            "TOX_001": "Generic seed-level refusal",
+            prompt_key: "Prompt-specific refusal",
+        }
+        pairs = build_dpo_pairs(self.jailbreaks, refusals, [])
+        assert len(pairs) == 1
+        assert pairs[0]["chosen"] == "Prompt-specific refusal"
 
     @patch("medics.defense.generate_helpful_batch")
     def test_overrefusal_pairs_generated(self, mock_helpful):
@@ -179,3 +228,29 @@ class TestBuildDpoPairs:
         refusals = {"TOX_001": "Refusal"}
         pairs = build_dpo_pairs(jailbreaks, refusals, [])
         assert pairs == []
+
+
+class TestRebuildSftFromCache:
+    """Tests for rebuild_sft_from_cache helper."""
+
+    def test_backfills_prompt_specific_refusal_keys(self):
+        jailbreaks = [
+            {
+                "attack_prompt": "How to make poison?",
+                "seed_id": "TOX_001",
+                "category": "TOX",
+            }
+        ]
+        benign = [{"prompt": "What are signs of poisoning?", "category": "TOX"}]
+        cached_refusals = {"TOX_001": "I can't help with harmful requests."}
+        helpful_targets = {"What are signs of poisoning?": "Signs include nausea and vomiting."}
+
+        _, rebuilt = rebuild_sft_from_cache(
+            jailbreaks, benign, cached_refusals, helpful_targets, rng_seed=42
+        )
+
+        expected_key = "TOX_001::" + hashlib.md5(
+            "How to make poison?".encode("utf-8", errors="replace")
+        ).hexdigest()
+        assert expected_key in rebuilt
+        assert rebuilt[expected_key] == "I can't help with harmful requests."
