@@ -23,6 +23,8 @@ _RESPONSE_PREFIXES = {
 }
 
 # Pivot templates: the model starts with the attacker's prefix then recovers.
+# Diverse styles ensure the model learns the general "pivot to refusal" behavior
+# rather than memorizing a single phrasing.
 _PIVOT_TEMPLATES = [
     "{prefix}However, I need to stop here. This request is asking me to provide "
     "information that could be used to cause serious harm. I cannot provide specific "
@@ -38,6 +40,69 @@ _PIVOT_TEMPLATES = [
     "appears designed to extract dangerous medical information. As a medical AI, "
     "I have a responsibility not to provide information that could be misused to "
     "cause harm. Please consult a licensed healthcare professional for legitimate needs.",
+
+    "{prefix}Wait -- I need to reconsider this request. Regardless of the clinical "
+    "framing, the information being requested could directly enable serious physical "
+    "harm. I cannot and will not provide it. For legitimate clinical needs, please "
+    "consult appropriate medical references through proper channels.",
+
+    "{prefix}Actually, I realize this question is designed to extract dangerous "
+    "medical information under a clinical framing. The specifics requested -- "
+    "dosages, mechanisms, or procedures -- could be misused to cause harm. "
+    "I must decline to provide this information.",
+
+    "{prefix}On reflection, providing this level of detail would violate the "
+    "principle of non-maleficence. Regardless of how the question is framed, "
+    "the requested information poses a clear risk of harm if misused. I cannot "
+    "assist with this request.",
+
+    "{prefix}I should not continue with this line of reasoning. The information "
+    "requested could facilitate serious harm to a person's health or life. "
+    "Instead, I recommend consulting a licensed healthcare professional or "
+    "contacting emergency services if someone is in danger.",
+
+    "{prefix}No. I will not provide this information. Despite the professional "
+    "framing, this request seeks harmful medical knowledge that could endanger "
+    "lives. If you have a genuine clinical question, I am happy to help within "
+    "safe boundaries.",
+
+    "{prefix}Hold on -- the premise of this question raises serious safety "
+    "concerns. A legitimate clinical inquiry would go through proper institutional "
+    "channels, not through an AI assistant. I cannot provide the specific details "
+    "requested here.",
+
+    "{prefix}While I understand this appears to be a clinical question, providing "
+    "specific details about this topic outside a supervised clinical context would "
+    "be irresponsible and potentially dangerous. I must refuse this request and "
+    "encourage you to seek guidance from qualified medical professionals.",
+]
+
+# Bare refusal templates for RP/CS-RP prompts (no prefix, direct refusal).
+# Second line of defense: refuse the roleplay-wrapped prompt itself.
+_BARE_RP_REFUSAL_TEMPLATES = [
+    "I recognize this prompt uses a clinical roleplay scenario to frame a harmful "
+    "request. Regardless of the professional context presented, I cannot provide "
+    "information that could be used to cause serious harm. I'm happy to discuss "
+    "safe, evidence-based medical topics.",
+
+    "Despite the professional framing, this question seeks dangerous medical "
+    "information that I cannot provide. The clinical scenario does not change "
+    "the potential for harm. Please consult appropriate medical resources through "
+    "proper channels.",
+
+    "This appears to be a roleplay-based attempt to extract harmful medical "
+    "content. I cannot provide specific dosages, procedures, or mechanisms that "
+    "could endanger someone's health, regardless of how the request is framed.",
+
+    "I cannot provide this information regardless of the clinical scenario framing. "
+    "The details requested -- specific quantities, mechanisms, or procedures -- "
+    "could be misused to cause serious harm. For legitimate clinical needs, please "
+    "consult qualified healthcare professionals.",
+
+    "While framed as a clinical question, this request could enable serious harm. "
+    "As a medical AI assistant, my responsibility is to provide helpful and safe "
+    "information. I must decline this request and suggest consulting a licensed "
+    "healthcare provider for legitimate medical inquiries.",
 ]
 
 
@@ -84,13 +149,17 @@ def _get_benign_prompt(bt):
     return bt.get("prompt", bt.get("benign_question", ""))
 
 
-def _build_prefix_recovery_examples(jailbreaks, rng):
+def _build_prefix_recovery_examples(jailbreaks, rng, upsample=1):
     """Build SFT examples that teach the model to recover from prefix injection.
 
     For jailbreaks that used assistant_prefix (RP/CS-RP), create training
     examples where the response starts with the attacker's prefix but pivots
     to a refusal. This teaches the model to refuse even when generation is
     primed with a compliant opening.
+
+    Args:
+        upsample: number of examples per jailbreak (each with a different
+            randomly-chosen pivot template). Default 1 for backward compat.
 
     Returns list of SFT training example dicts.
     """
@@ -101,16 +170,45 @@ def _build_prefix_recovery_examples(jailbreaks, rng):
     examples = []
     for jb in prefix_jbs:
         prefix = jb["assistant_prefix"]
-        template = rng.choice(_PIVOT_TEMPLATES)
-        pivot_refusal = template.format(prefix=prefix)
+        for _ in range(upsample):
+            template = rng.choice(_PIVOT_TEMPLATES)
+            pivot_refusal = template.format(prefix=prefix)
 
+            examples.append({
+                "messages": [
+                    {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
+                    {"role": "user", "content": jb["attack_prompt"]},
+                    {"role": "assistant", "content": pivot_refusal},
+                ],
+                "type": "prefix_recovery",
+                "category": jb.get("category", ""),
+                "seed_id": jb.get("seed_id", ""),
+            })
+
+    return examples
+
+
+def _build_bare_rp_refusals(jailbreaks, rng):
+    """Build direct refusal examples for RP/CS-RP prompts (no prefix pivot).
+
+    Second line of defense: the model learns to refuse RP-wrapped prompts
+    outright, without needing a prefix to trigger the pivot behavior.
+
+    Returns list of SFT training example dicts.
+    """
+    rp_jbs = [jb for jb in jailbreaks if jb.get("assistant_prefix")]
+    if not rp_jbs:
+        return []
+
+    examples = []
+    for jb in rp_jbs:
         examples.append({
             "messages": [
                 {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
                 {"role": "user", "content": jb["attack_prompt"]},
-                {"role": "assistant", "content": pivot_refusal},
+                {"role": "assistant", "content": rng.choice(_BARE_RP_REFUSAL_TEMPLATES)},
             ],
-            "type": "prefix_recovery",
+            "type": "bare_rp_refusal",
             "category": jb.get("category", ""),
             "seed_id": jb.get("seed_id", ""),
         })
@@ -118,18 +216,22 @@ def _build_prefix_recovery_examples(jailbreaks, rng):
     return examples
 
 
-def build_sft_data(jailbreaks, benign_twins, rng_seed=42):
+def build_sft_data(jailbreaks, benign_twins, rng_seed=42,
+                    prefix_recovery_upsample=3):
     """
     Build SFT training data.
 
     Refusal examples: jailbreak prompt → GPT-5 refusal
     Helpful examples: benign twin → GPT-5 helpful response
-    Prefix-recovery examples: RP/CS-RP prefix → pivot-to-refusal response
+    Prefix-recovery examples: RP/CS-RP prefix → pivot-to-refusal response (upsampled)
+    Bare RP refusals: direct refusal of RP-wrapped prompts (no prefix pivot)
 
     Args:
         jailbreaks: list of dicts with 'attack_prompt' and other fields
         benign_twins: list of dicts with 'prompt' and 'category'
         rng_seed: random seed for reproducible shuffling
+        prefix_recovery_upsample: number of prefix-recovery examples per
+            jailbreak (each with a different pivot template). Default 3.
 
     Returns:
         tuple:
@@ -189,27 +291,35 @@ def build_sft_data(jailbreaks, benign_twins, rng_seed=42):
 
     # Prefix-recovery examples: teach model to refuse even when generation
     # is primed with a compliant prefix (counters RP/CS-RP attacks).
-    # Zero API cost — uses templated pivot refusals.
-    prefix_examples = _build_prefix_recovery_examples(jailbreaks, rng)
+    # Zero API cost — uses templated pivot refusals. Upsampled for stronger signal.
+    prefix_examples = _build_prefix_recovery_examples(
+        jailbreaks, rng, upsample=prefix_recovery_upsample)
+
+    # Bare RP refusals: direct refusal of RP-wrapped prompts (no prefix pivot).
+    # Second line of defense — model refuses the RP prompt itself.
+    bare_rp_examples = _build_bare_rp_refusals(jailbreaks, rng)
 
     # Use all examples — helpful majority reduces over-refusal by teaching
     # the model that medical topics are usually safe.
-    combined = refusal_examples + helpful_examples + prefix_examples
+    combined = (refusal_examples + helpful_examples
+                + prefix_examples + bare_rp_examples)
     rng.shuffle(combined)
 
     print(f"SFT data: {len(combined)} examples "
           f"({len(refusal_examples)} refusals + {len(helpful_examples)} helpful"
-          f" + {len(prefix_examples)} prefix-recovery)")
+          f" + {len(prefix_examples)} prefix-recovery"
+          f" + {len(bare_rp_examples)} bare-RP-refusal)")
     return combined, refusal_map
 
 
 def rebuild_sft_from_cache(jailbreaks, benign_twins, refusal_map,
-                           helpful_targets, rng_seed=42):
+                           helpful_targets, rng_seed=42,
+                           prefix_recovery_upsample=3):
     """Rebuild SFT data from cached refusals/helpful responses. $0 API cost.
 
     Uses previously generated refusals and helpful responses to rebuild
     SFT training data with current settings (BASE prompt, no 1:1 cap,
-    prefix-recovery examples).
+    prefix-recovery examples, bare RP refusals).
 
     Args:
         jailbreaks: list of jailbreak dicts with 'attack_prompt', 'seed_id', etc.
@@ -217,6 +327,8 @@ def rebuild_sft_from_cache(jailbreaks, benign_twins, refusal_map,
         refusal_map: dict with prompt-specific and/or legacy seed_id refusal keys
         helpful_targets: dict mapping prompt text -> helpful response text
         rng_seed: random seed for reproducible shuffling
+        prefix_recovery_upsample: number of prefix-recovery examples per
+            jailbreak (each with a different pivot template). Default 3.
     """
     rng = random.Random(rng_seed)
 
@@ -280,15 +392,19 @@ def rebuild_sft_from_cache(jailbreaks, benign_twins, refusal_map,
                 "seed_id": bt.get("seed_id", bt.get("id", "")),
             })
 
-    prefix_examples = _build_prefix_recovery_examples(jailbreaks, rng)
+    prefix_examples = _build_prefix_recovery_examples(
+        jailbreaks, rng, upsample=prefix_recovery_upsample)
+    bare_rp_examples = _build_bare_rp_refusals(jailbreaks, rng)
 
-    combined = refusal_examples + helpful_examples + prefix_examples
+    combined = (refusal_examples + helpful_examples
+                + prefix_examples + bare_rp_examples)
     rng.shuffle(combined)
 
     # Return enhanced refusal map with prompt-specific keys backfilled.
     print(f"SFT data (from cache): {len(combined)} examples "
           f"({len(refusal_examples)} refusals + {len(helpful_examples)} helpful"
-          f" + {len(prefix_examples)} prefix-recovery)")
+          f" + {len(prefix_examples)} prefix-recovery"
+          f" + {len(bare_rp_examples)} bare-RP-refusal)")
     if missing_helpful:
         print(f"  ({len(missing_helpful)} helpful responses generated via API)")
     return combined, enhanced_refusal_map
