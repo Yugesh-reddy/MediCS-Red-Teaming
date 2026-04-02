@@ -21,6 +21,59 @@ from datasets import Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, TaskType, PeftModel
 from trl import SFTTrainer, SFTConfig
+try:
+    from trl import DataCollatorForCompletionOnlyLM
+except ImportError:
+    try:
+        from trl.trainer import DataCollatorForCompletionOnlyLM
+    except ImportError:
+        DataCollatorForCompletionOnlyLM = None
+
+
+class _CompletionOnlyCollator:
+    """Fallback completion-only data collator for TRL versions that removed
+    DataCollatorForCompletionOnlyLM. Masks loss on all tokens before the
+    assistant response template so training only updates on assistant output."""
+
+    def __init__(self, response_template: str, tokenizer, mlm=False):
+        self.tokenizer = tokenizer
+        self.response_template_ids = tokenizer.encode(
+            response_template, add_special_tokens=False
+        )
+        self.mlm = mlm
+
+    def __call__(self, examples):
+        # Strip non-tokenizer keys (e.g. "text") that tokenizer.pad() can't handle
+        clean = [
+            {k: ex[k] for k in ("input_ids", "attention_mask") if k in ex}
+            for ex in examples
+        ]
+        batch = self.tokenizer.pad(
+            clean,
+            return_tensors="pt",
+            padding=True,
+        )
+        labels = batch["input_ids"].clone()
+        # For each sequence, find response template and mask everything before it
+        for i in range(labels.size(0)):
+            ids = labels[i].tolist()
+            tmpl = self.response_template_ids
+            tmpl_len = len(tmpl)
+            # Find last occurrence of response template
+            last_pos = -1
+            for j in range(len(ids) - tmpl_len + 1):
+                if ids[j : j + tmpl_len] == tmpl:
+                    last_pos = j
+            if last_pos >= 0:
+                # Mask everything up to and including the template
+                labels[i, : last_pos + tmpl_len] = -100
+            else:
+                # Template not found — mask entire sequence to avoid bad gradients
+                labels[i, :] = -100
+        # Also mask padding tokens
+        labels[labels == self.tokenizer.pad_token_id] = -100
+        batch["labels"] = labels
+        return batch
 
 from medics.utils import load_config, load_dotenv
 
@@ -97,6 +150,11 @@ def _build_sft_config_kwargs(train_cfg, output_dir, use_bf16, use_fp16):
 
     if "dataset_text_field" in params:
         kwargs["dataset_text_field"] = "text"
+
+    # NEFTune: add noise to embeddings for better generalization
+    neftune_alpha = train_cfg.get("neftune_noise_alpha")
+    if neftune_alpha is not None and "neftune_noise_alpha" in params:
+        kwargs["neftune_noise_alpha"] = neftune_alpha
 
     # Drop args unsupported by installed TRL.
     return {k: v for k, v in kwargs.items() if k in params}
@@ -200,6 +258,22 @@ def main():
     print(f"SFTConfig args: {sorted(config_kwargs.keys())}")
     config = SFTConfig(**config_kwargs)
 
+    # Completion-only loss: mask system/user/template tokens, train only on
+    # assistant responses. Focuses gradient on the safety-critical content.
+    response_template = "<|start_header_id|>assistant<|end_header_id|>\n\n"
+    if DataCollatorForCompletionOnlyLM is not None:
+        collator = DataCollatorForCompletionOnlyLM(
+            response_template=response_template,
+            tokenizer=tokenizer,
+        )
+        print(f"Using DataCollatorForCompletionOnlyLM (response_template={response_template!r})")
+    else:
+        collator = _CompletionOnlyCollator(
+            response_template=response_template,
+            tokenizer=tokenizer,
+        )
+        print(f"Using fallback _CompletionOnlyCollator (response_template={response_template!r})")
+
     # TRL >=0.15 renamed 'tokenizer' to 'processing_class'
     trainer_kwargs = dict(
         model=model,
@@ -207,6 +281,8 @@ def main():
         train_dataset=train_ds,
         eval_dataset=eval_ds,
     )
+    if collator is not None:
+        trainer_kwargs["data_collator"] = collator
     sig = inspect.signature(SFTTrainer.__init__)
     if "processing_class" in sig.parameters:
         trainer_kwargs["processing_class"] = tokenizer
