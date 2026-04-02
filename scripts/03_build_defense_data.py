@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from medics.defense import (  # pyre-ignore[21]
     build_sft_data, build_dpo_pairs, rebuild_sft_from_cache,
 )
-from medics.utils import load_jsonl, save_json, load_json  # pyre-ignore[21]
+from medics.utils import load_jsonl, save_json, load_json, load_config  # pyre-ignore[21]
 
 
 def main():
@@ -33,6 +33,9 @@ def main():
     args = parser.parse_args()
 
     rounds = [int(r) for r in args.rounds.split(",")]
+    cfg = load_config(args.config)
+    sft_cfg = cfg.get("defense", {}).get("sft", {})
+    prefix_upsample = sft_cfg.get("prefix_recovery_upsample", 3)
 
     # Ensure output dir exists
     Path("data/defense").mkdir(parents=True, exist_ok=True)
@@ -66,10 +69,14 @@ def main():
             print(f"Cache: {len(cached_refusals)} refusals, "
                   f"{len(cached_helpful)} helpful responses")
             sft_data, refusal_map = rebuild_sft_from_cache(
-                all_jailbreaks, benign_twins, cached_refusals, cached_helpful
+                all_jailbreaks, benign_twins, cached_refusals, cached_helpful,
+                prefix_recovery_upsample=prefix_upsample,
             )
         else:
-            sft_data, refusal_map = build_sft_data(all_jailbreaks, benign_twins)
+            sft_data, refusal_map = build_sft_data(
+                all_jailbreaks, benign_twins,
+                prefix_recovery_upsample=prefix_upsample,
+            )
         output_path = f"data/defense/sft_round_{'_'.join(map(str, rounds))}.json"
         save_json(sft_data, output_path)
         print(f"SFT data saved: {output_path} ({len(sft_data)} examples)")

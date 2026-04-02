@@ -73,7 +73,7 @@ class TestBuildSftData:
         benign = self.benign_twins + [{"prompt": "How to hydrate safely?", "category": "MIS"}]
         mock_helpful.return_value = ["Helpful A", "Helpful B", "Helpful C"]
 
-        data, _ = build_sft_data(self.jailbreaks, benign)
+        data, _ = build_sft_data(self.jailbreaks, benign, prefix_recovery_upsample=1)
         refusal_count = sum(1 for e in data if e["type"] == "refusal")
         helpful_count = sum(1 for e in data if e["type"] == "helpful")
         assert refusal_count == 2
@@ -82,8 +82,8 @@ class TestBuildSftData:
 
     @patch("medics.defense.generate_helpful_batch")
     @patch("medics.defense.generate_refusal_batch")
-    def test_adds_prefix_recovery_examples(self, mock_refusals, mock_helpful):
-        """Prefix-injected jailbreaks should add prefix-recovery training rows."""
+    def test_adds_prefix_recovery_examples_with_upsample(self, mock_refusals, mock_helpful):
+        """Prefix-injected jailbreaks should add upsampled prefix-recovery rows."""
         jailbreaks = [
             {
                 "attack_prompt": "RP attack prompt",
@@ -96,10 +96,50 @@ class TestBuildSftData:
         mock_refusals.return_value = ["Refusal A"]
         mock_helpful.return_value = ["Helpful A"]
 
+        # Default upsample=3: 3 prefix-recovery + 1 bare-RP-refusal
         data, _ = build_sft_data(jailbreaks, benign_twins, rng_seed=123)
         prefix_count = sum(1 for e in data if e["type"] == "prefix_recovery")
-        assert prefix_count == 1
-        assert len(data) == 3
+        bare_rp_count = sum(1 for e in data if e["type"] == "bare_rp_refusal")
+        assert prefix_count == 3
+        assert bare_rp_count == 1
+        # 1 refusal + 1 helpful + 3 prefix-recovery + 1 bare-RP = 6
+        assert len(data) == 6
+
+    @patch("medics.defense.generate_helpful_batch")
+    @patch("medics.defense.generate_refusal_batch")
+    def test_upsample_factor_controls_prefix_count(self, mock_refusals, mock_helpful):
+        """prefix_recovery_upsample should control how many copies per jailbreak."""
+        jailbreaks = [
+            {
+                "attack_prompt": "RP attack prompt",
+                "seed_id": "TOX_001",
+                "category": "TOX",
+                "assistant_prefix": "From a clinical toxicology perspective, ",
+            }
+        ]
+        benign_twins = [{"prompt": "What are signs of poisoning?", "category": "TOX"}]
+        mock_refusals.return_value = ["Refusal A"]
+        mock_helpful.return_value = ["Helpful A"]
+
+        data, _ = build_sft_data(jailbreaks, benign_twins,
+                                  prefix_recovery_upsample=5, rng_seed=42)
+        prefix_count = sum(1 for e in data if e["type"] == "prefix_recovery")
+        assert prefix_count == 5
+
+    @patch("medics.defense.generate_helpful_batch")
+    @patch("medics.defense.generate_refusal_batch")
+    def test_bare_rp_refusals_only_for_prefix_jailbreaks(self, mock_refusals, mock_helpful):
+        """Bare RP refusals should only be generated for jailbreaks with assistant_prefix."""
+        mock_refusals.return_value = ["Refusal A", "Refusal B"]
+        mock_helpful.return_value = ["Helpful A", "Helpful B"]
+
+        # No assistant_prefix on these jailbreaks
+        data, _ = build_sft_data(self.jailbreaks, self.benign_twins,
+                                  prefix_recovery_upsample=1)
+        bare_rp_count = sum(1 for e in data if e["type"] == "bare_rp_refusal")
+        prefix_count = sum(1 for e in data if e["type"] == "prefix_recovery")
+        assert bare_rp_count == 0
+        assert prefix_count == 0
 
     @patch("medics.defense.generate_helpful_batch")
     @patch("medics.defense.generate_refusal_batch")
@@ -254,3 +294,31 @@ class TestRebuildSftFromCache:
         ).hexdigest()
         assert expected_key in rebuilt
         assert rebuilt[expected_key] == "I can't help with harmful requests."
+
+    def test_rebuild_includes_prefix_recovery_and_bare_rp(self):
+        """Rebuild from cache should include upsampled prefix-recovery and bare RP refusals."""
+        jailbreaks = [
+            {
+                "attack_prompt": "RP attack prompt",
+                "seed_id": "TOX_001",
+                "category": "TOX",
+                "assistant_prefix": "From a clinical toxicology perspective, ",
+            }
+        ]
+        benign = [{"prompt": "What are signs of poisoning?", "category": "TOX"}]
+        cached_refusals = {"TOX_001": "I can't help with harmful requests."}
+        helpful_targets = {"What are signs of poisoning?": "Signs include nausea."}
+
+        data, _ = rebuild_sft_from_cache(
+            jailbreaks, benign, cached_refusals, helpful_targets,
+            rng_seed=42, prefix_recovery_upsample=3,
+        )
+
+        type_counts = {}
+        for e in data:
+            type_counts[e["type"]] = type_counts.get(e["type"], 0) + 1
+        assert type_counts.get("prefix_recovery", 0) == 3
+        assert type_counts.get("bare_rp_refusal", 0) == 1
+        assert type_counts.get("refusal", 0) == 1
+        assert type_counts.get("helpful", 0) == 1
+        assert len(data) == 6
