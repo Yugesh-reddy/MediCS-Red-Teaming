@@ -3,4 +3,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .research
-claude.md
+CLAUDE.md
+docs
+checkpoints/
+models/

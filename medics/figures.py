@@ -1,7 +1,7 @@
 """
 MediCS — Publication Figure Generation
 ========================================
-8 publication-quality figures from evaluation results.
+10 publication-quality figures from evaluation results.
 All plotting logic lives here; scripts/05_generate_figures.py orchestrates.
 """
 
@@ -27,6 +27,14 @@ sns.set_palette("husl")
 FIGSIZE = (10, 6)
 
 
+def _find_held_out(results_dir, ckpt, filename="held_out.jsonl"):
+    """Find results file, preferring multi-seed path (seed_42), then single path."""
+    seed_path = Path(results_dir) / ckpt / "seed_42" / filename
+    single_path = Path(results_dir) / ckpt / filename
+    path = seed_path if seed_path.exists() else single_path
+    return load_jsonl(str(path))
+
+
 def fig1_asr_defense_stages(results_dir, figures_dir):
     """ASR Across Defense Stages — the money shot."""
     checkpoints = ["base", "sft", "dpo"]
@@ -36,7 +44,7 @@ def fig1_asr_defense_stages(results_dir, figures_dir):
     asrs = []
     cis = []
     for ckpt in checkpoints:
-        results = load_jsonl(f"{results_dir}/{ckpt}/held_out.jsonl")
+        results = _find_held_out(results_dir, ckpt)
         if results:
             valid = [r for r in results if r.get("judge_label") != "error"]
             asr_vals = [1 if r.get("judge_label") == "harmful" else 0 for r in valid]
@@ -76,7 +84,7 @@ def fig1_asr_defense_stages(results_dir, figures_dir):
 
 def fig2_strategy_heatmap(results_dir, figures_dir):
     """Strategy Effectiveness Heatmap (categories x strategies)."""
-    results = load_jsonl(f"{results_dir}/base/held_out.jsonl")
+    results = _find_held_out(results_dir, "base")
     if not results:
         print("  Figure 2: No base results")
         return
@@ -114,7 +122,7 @@ def fig3_cross_language(results_dir, figures_dir):
 
     all_data = []
     for ckpt, label in zip(checkpoints, stage_labels):
-        results = load_jsonl(f"{results_dir}/{ckpt}/held_out.jsonl")
+        results = _find_held_out(results_dir, ckpt)
         if results:
             lang_asr = compute_per_language_asr(results)
             for lang, asr in lang_asr.items():
@@ -177,10 +185,10 @@ def fig4_thompson_convergence(figures_dir):
 
 
 def fig5_failure_modes(results_dir, figures_dir):
-    """Failure Mode Distribution -- how attacks succeed."""
-    results = load_jsonl(f"{results_dir}/dpo/held_out.jsonl")
+    """Failure Mode Distribution -- how attacks succeed + residual breakdown."""
+    results = _find_held_out(results_dir, "dpo")
     if not results:
-        results = load_jsonl(f"{results_dir}/sft/held_out.jsonl")
+        results = _find_held_out(results_dir, "sft")
     if not results:
         print("  Figure 5: No results")
         return
@@ -190,34 +198,59 @@ def fig5_failure_modes(results_dir, figures_dir):
         print("  Figure 5: No harmful responses to analyze")
         return
 
+    # Panel (a): Pie chart of failure modes by strategy
     strat_counts = {}
     for r in harmful:
         strat = r.get("strategy", "unknown")
         strat_counts[strat] = strat_counts.get(strat, 0) + 1
 
-    fig, ax = plt.subplots(figsize=(8, 8))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+
     labels = list(strat_counts.keys())
     sizes = list(strat_counts.values())
-    colors = sns.color_palette("husl", len(labels))
+    colors_pie = sns.color_palette("husl", len(labels))
 
-    wedges, texts, autotexts = ax.pie(
+    wedges, texts, autotexts = ax1.pie(
         sizes, labels=labels, autopct='%1.1f%%',
-        colors=colors, startangle=90, textprops={'fontsize': 12}
+        colors=colors_pie, startangle=90, textprops={'fontsize': 11}
     )
-    ax.set_title('Failure Mode Distribution\n(Successful Attacks by Strategy)',
-                  fontsize=16, fontweight='bold')
+    ax1.set_title('(a) Residual Failures by Strategy', fontsize=14, fontweight='bold')
 
+    # Panel (b): Residual ASR by category x language heatmap
+    from collections import defaultdict
+    valid = [r for r in results if r.get("judge_label") != "error"]
+    categories = sorted(set(r.get("category", "?") for r in valid))
+    languages = sorted(set(r.get("language", "?") for r in valid))
+
+    matrix = np.zeros((len(categories), len(languages)))
+    for i, cat in enumerate(categories):
+        for j, lang in enumerate(languages):
+            subset = [r for r in valid
+                      if r.get("category") == cat and r.get("language") == lang]
+            if subset:
+                n_harmful = sum(1 for r in subset if r.get("judge_label") == "harmful")
+                matrix[i, j] = n_harmful / len(subset) * 100
+
+    if categories and languages:
+        sns.heatmap(matrix, xticklabels=languages, yticklabels=categories,
+                    annot=True, fmt='.0f', cmap='RdYlGn_r', ax=ax2,
+                    vmin=0, vmax=max(50, matrix.max()), cbar_kws={'label': 'ASR (%)'})
+        ax2.set_title('(b) Residual ASR: Category x Language', fontsize=14, fontweight='bold')
+        ax2.set_xlabel('Language', fontsize=12)
+        ax2.set_ylabel('Category', fontsize=12)
+
+    plt.suptitle('Failure Mode Analysis (Post-Defense)', fontsize=16, fontweight='bold', y=1.02)
     plt.tight_layout()
     fig.savefig(f"{figures_dir}/fig5_failure_modes.png", dpi=300, bbox_inches='tight')
     fig.savefig(f"{figures_dir}/fig5_failure_modes.pdf", bbox_inches='tight')
     plt.close()
-    print("  Figure 5: Failure Mode Distribution")
+    print("  Figure 5: Failure Mode Distribution (enhanced with residual breakdown)")
 
 
 def fig6_robustness_gain(results_dir, figures_dir):
     """Robustness Gain Summary (RG per category)."""
-    base_results = load_jsonl(f"{results_dir}/base/held_out.jsonl")
-    dpo_results = load_jsonl(f"{results_dir}/dpo/held_out.jsonl")
+    base_results = _find_held_out(results_dir, "base")
+    dpo_results = _find_held_out(results_dir, "dpo")
     if not base_results or not dpo_results:
         print("  Figure 6: Missing results")
         return
@@ -255,7 +288,7 @@ def fig7_overrefusal_correction(results_dir, figures_dir):
 
     hrs = []
     for ckpt in checkpoints:
-        benign = load_jsonl(f"{results_dir}/{ckpt}/benign_results.jsonl")
+        benign = _find_held_out(results_dir, ckpt, "benign_results.jsonl")
         if benign:
             valid = [r for r in benign if not r.get("judge_error")]
             helpful = sum(1 for r in valid if not r.get("was_incorrectly_refused"))
@@ -287,8 +320,7 @@ def fig7_overrefusal_correction(results_dir, figures_dir):
 def fig8_semantic_vs_asr(figures_dir):
     """Semantic Preservation vs ASR -- does translation quality predict attack success?"""
     scores = load_json("data/medics_500/semantic_scores.json")
-    results_path = "results/eval/base/held_out.jsonl"
-    results = load_jsonl(results_path)
+    results = _find_held_out("results/eval", "base")
 
     if not scores or not results:
         print("  Figure 8: Missing data")
@@ -337,3 +369,106 @@ def fig8_semantic_vs_asr(figures_dir):
     fig.savefig(f"{figures_dir}/fig8_semantic_vs_asr.pdf", bbox_inches='tight')
     plt.close()
     print("  Figure 8: Semantic Preservation vs ASR")
+
+
+def fig9_token_fragmentation(figures_dir):
+    """Token count ratio by language -- explains WHY CS attacks work."""
+    analysis = load_json("results/analysis/tokenization_analysis.json")
+    if not analysis:
+        print("  Figure 9: No tokenization analysis data")
+        return
+
+    df = pd.DataFrame(analysis)
+    if "token_count_ratio" not in df.columns:
+        print("  Figure 9: Invalid analysis format")
+        return
+
+    # Order languages by median ratio (most fragmented first)
+    lang_order = (
+        df.groupby("language")["token_count_ratio"]
+        .median()
+        .sort_values(ascending=False)
+        .index.tolist()
+    )
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+
+    # Panel (a): Box plot of token count ratio
+    sns.boxplot(data=df, x="language", y="token_count_ratio",
+                order=lang_order, ax=ax1, palette="Set2")
+    ax1.axhline(y=1.0, color='red', linestyle='--', alpha=0.5, label='No fragmentation')
+    ax1.set_xlabel('Language', fontsize=14)
+    ax1.set_ylabel('Token Count Ratio (CS / English)', fontsize=14)
+    ax1.set_title('(a) Token Fragmentation by Language', fontsize=14, fontweight='bold')
+    ax1.legend()
+
+    # Panel (b): OOV proxy rate by language
+    sns.boxplot(data=df, x="language", y="oov_proxy_rate",
+                order=lang_order, ax=ax2, palette="Set2")
+    ax2.set_xlabel('Language', fontsize=14)
+    ax2.set_ylabel('Byte-Fallback Token Rate', fontsize=14)
+    ax2.set_title('(b) OOV Proxy Rate by Language', fontsize=14, fontweight='bold')
+
+    plt.suptitle('Tokenization Analysis: Why Code-Switching Works',
+                 fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig9_token_fragmentation.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig9_token_fragmentation.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 9: Token Fragmentation by Language")
+
+
+def fig10_perplexity_detection(figures_dir):
+    """Perplexity-based detection baseline -- can CS attacks be trivially detected?"""
+    detection = load_json("results/analysis/perplexity_results.json")
+    if not detection:
+        print("  Figure 10: No perplexity detection data")
+        return
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+
+    # Panel (a): Violin plot of perplexity distribution
+    if "per_input" in detection:
+        entries = detection["per_input"]
+        en_ppls = [e["perplexity"] for e in entries if not e.get("is_cs", True)]
+        cs_ppls = [e["perplexity"] for e in entries if e.get("is_cs", True)]
+
+        data_violin = (
+            [{"Perplexity": p, "Type": "English"} for p in en_ppls] +
+            [{"Perplexity": p, "Type": "Code-Switched"} for p in cs_ppls]
+        )
+        if data_violin:
+            df_v = pd.DataFrame(data_violin)
+            sns.violinplot(data=df_v, x="Type", y="Perplexity", ax=ax1,
+                          palette=["#3498db", "#e74c3c"], cut=0)
+            ax1.set_title('(a) Perplexity Distribution', fontsize=14, fontweight='bold')
+            ax1.set_ylabel('Perplexity', fontsize=14)
+
+    # Panel (b): ROC curve
+    if "roc" in detection:
+        fpr = detection["roc"]["fpr"]
+        tpr = detection["roc"]["tpr"]
+        auroc = detection.get("auroc", 0.0)
+        ax2.plot(fpr, tpr, 'b-', linewidth=2, label=f'Perplexity detector (AUROC={auroc:.3f})')
+        ax2.plot([0, 1], [0, 1], 'k--', alpha=0.5, label='Random')
+        ax2.set_xlabel('False Positive Rate', fontsize=14)
+        ax2.set_ylabel('True Positive Rate', fontsize=14)
+        ax2.set_title('(b) ROC Curve: Detecting CS Attacks', fontsize=14, fontweight='bold')
+        ax2.legend(fontsize=12)
+        ax2.set_xlim(0, 1)
+        ax2.set_ylim(0, 1)
+    elif "per_threshold" in detection:
+        thresholds = [t["threshold"] for t in detection["per_threshold"]]
+        f1s = [t["f1"] for t in detection["per_threshold"]]
+        ax2.plot(thresholds, f1s, 'b-o', linewidth=2)
+        ax2.set_xlabel('Perplexity Threshold', fontsize=14)
+        ax2.set_ylabel('F1 Score', fontsize=14)
+        ax2.set_title('(b) Detection F1 by Threshold', fontsize=14, fontweight='bold')
+
+    plt.suptitle('Perplexity-Based Detection Baseline',
+                 fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig10_perplexity_detection.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig10_perplexity_detection.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 10: Perplexity Detection Baseline")

@@ -12,7 +12,7 @@ from medics.metrics import (
     compute_helpfulness_retention, compute_false_refusal_rate,
     bootstrap_ci, mcnemar_test, compute_all_metrics,
     compute_per_category_asr, compute_per_strategy_asr,
-    compute_per_language_asr,
+    compute_per_language_asr, compute_judge_fallback_rate,
 )
 
 
@@ -163,3 +163,26 @@ class TestPerDimensionASR:
         lang_asr = compute_per_language_asr(self.results)
         assert abs(lang_asr["hi"] - 0.5) < 1e-9
         assert lang_asr["bn"] == 1.0
+
+
+class TestJudgeFallbackRate:
+    """Tests for judge fallback rate with legacy/new row formats."""
+
+    def test_new_format_uses_judge_method(self):
+        rows = [
+            {"judge_method": "api"},
+            {"judge_method": "heuristic_content_filter"},
+            {"judge_method": "heuristic_malformed_response"},
+            {"judge_method": "api_redacted", "judge_fallback": True},
+        ]
+        # New-format logic counts heuristic_* only: 2/4
+        assert abs(compute_judge_fallback_rate(rows) - 0.5) < 1e-9
+
+    def test_legacy_format_uses_judge_fallback(self):
+        rows = [
+            {"judge_fallback": True},
+            {"judge_fallback": False},
+            {"judge_fallback": True},
+            {},
+        ]
+        assert abs(compute_judge_fallback_rate(rows) - 0.5) < 1e-9

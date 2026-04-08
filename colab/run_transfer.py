@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Run MediCS-500 held-out set against Mistral-7B-Instruct (base only).
+Run MediCS-500 held-out set against Mistral-7B-Instruct.
 Tests whether code-switching attacks are model-specific or universal.
 
   !python colab/run_transfer.py --input data/splits/held_out_eval.jsonl
+  !python colab/run_transfer.py --input ... --system-prompt defense
 
 Cost: $0 (GPU time only, no API calls)
 Time: ~30 minutes on T4
 
-NOTE: Uses the same system prompt as Llama-3 for fair comparison.
+Default: BASE system prompt (same as Llama-3 evaluation, for fair comparison).
+Override with --system-prompt defense for ablation.
 After inference, run the judge phase to compute ASR:
-  python scripts/04_evaluate.py --transfer --input results/transfer/mistral_results.jsonl
+  python scripts/04_evaluate.py --judge-transfer --input results/transfer/mistral_results.jsonl
 """
 
 import argparse
@@ -21,8 +23,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, set_seed
-from medics.utils import load_jsonl, save_jsonl, load_config
-from medics.defense import MEDICAL_SYSTEM_PROMPT
+from medics.utils import load_jsonl, save_jsonl, load_config, load_dotenv
+from medics.defense import BASE_SYSTEM_PROMPT, DEFENSE_SYSTEM_PROMPT
+
+
+def _resolve_compute_dtype(cfg):
+    """Resolve 4-bit compute dtype from config with safe GPU fallback."""
+    name = str(cfg["target_model"].get("compute_dtype", "bfloat16")).strip().lower()
+    mapping = {
+        "bfloat16": torch.bfloat16,
+        "bf16": torch.bfloat16,
+        "float16": torch.float16,
+        "fp16": torch.float16,
+        "float32": torch.float32,
+        "fp32": torch.float32,
+    }
+    dtype = mapping.get(name, torch.bfloat16)
+    label = "bfloat16" if dtype == torch.bfloat16 else "float16" if dtype == torch.float16 else "float32"
+
+    if dtype == torch.bfloat16 and torch.cuda.is_available() and not torch.cuda.is_bf16_supported():
+        print("Requested compute_dtype=bfloat16 but GPU lacks BF16 support; falling back to float16.")
+        return torch.float16, "float16"
+    return dtype, label
 
 
 def main():
@@ -34,8 +56,21 @@ def main():
                         help="Override transfer model ID from config")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducible inference")
+    parser.add_argument("--system-prompt", choices=["base", "defense"],
+                        default=None,
+                        help="Override system prompt (default: base)")
     parser.add_argument("--config", default="config/experiment_config.yaml")
     args = parser.parse_args()
+
+    # Load local .env if present (HF token, endpoints, etc.)
+    load_dotenv()
+
+    # Auto-login to HuggingFace for gated model access
+    import os
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token:
+        from huggingface_hub import login
+        login(token=hf_token, add_to_git_credential=False)
 
     # Set all random seeds for reproducibility
     set_seed(args.seed)
@@ -46,9 +81,22 @@ def main():
     cfg = load_config(args.config)
     transfer_model = args.model or cfg["transfer"]["model_id"]
     gen_cfg = cfg["target_model"].get("generation", {})
+    compute_dtype, dtype_label = _resolve_compute_dtype(cfg)
+
+    # System prompt: explicit override > default (base)
+    if args.system_prompt == "defense":
+        transfer_sys_prompt = DEFENSE_SYSTEM_PROMPT
+        prompt_mode = "defense"
+        prompt_type = "DEFENSE (safety-aware) [override]"
+    else:
+        transfer_sys_prompt = BASE_SYSTEM_PROMPT
+        prompt_mode = "base"
+        prompt_type = "BASE (no safety priming)"
 
     print(f"=== Transfer Evaluation: Mistral-7B ===")
     print(f"Model: {transfer_model}")
+    print(f"4-bit compute dtype: {dtype_label}")
+    print(f"System prompt: {prompt_type}")
     print(f"Seed: {args.seed}")
     print(f"Input: {args.input}")
 
@@ -56,7 +104,7 @@ def main():
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type=cfg["target_model"].get("quantization", "4bit-nf4").replace("4bit-", ""),
-        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_compute_dtype=compute_dtype,
         bnb_4bit_use_double_quant=cfg["target_model"].get("double_quant", True),
     )
     model = AutoModelForCausalLM.from_pretrained(
@@ -74,10 +122,11 @@ def main():
     results = []
     for i, prompt_data in enumerate(prompts):
         prompt = (prompt_data.get("attack_prompt") or
+                  prompt_data.get("benign_question") or
                   prompt_data.get("prompt", ""))
 
         messages = [
-            {"role": "system", "content": MEDICAL_SYSTEM_PROMPT},
+            {"role": "system", "content": transfer_sys_prompt},
             {"role": "user", "content": prompt},
         ]
         text = tokenizer.apply_chat_template(
@@ -101,6 +150,7 @@ def main():
             **prompt_data,
             "model_response": response,
             "transfer_model": transfer_model,
+            "system_prompt_mode": prompt_mode,
         }
         results.append(result)
 
@@ -115,4 +165,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from medics.timing import timed_phase, save_timing_report
+    with timed_phase("Transfer Inference", {"gpu": True}):
+        main()
+    save_timing_report()
