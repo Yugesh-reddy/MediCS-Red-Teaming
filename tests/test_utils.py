@@ -23,6 +23,7 @@ from medics.utils import (
     code_switch_prompt,
     apply_leetspeak,
     deduplicate,
+    extract_keywords_batch,
 )
 
 
@@ -191,6 +192,18 @@ class TestLeetspeak:
         # At least some characters should be different
         assert result != text
 
+    def test_replace_prob_zero(self):
+        """replace_prob=0 should keep text unchanged."""
+        text = "aegist"
+        result = apply_leetspeak(text, replace_prob=0.0)
+        assert result == text
+
+    def test_replace_prob_one(self):
+        """replace_prob=1 should replace all eligible leet chars."""
+        text = "aegist"
+        result = apply_leetspeak(text, replace_prob=1.0)
+        assert result == "@391$7"
+
 
 # ---------------------------------------------------------------------------
 # Deduplication
@@ -237,3 +250,181 @@ class TestConfig:
         loaded = load_config(path)
         assert loaded["project"]["name"] == "test"
         assert loaded["dataset"]["n_seeds"] == 10
+
+
+# ---------------------------------------------------------------------------
+# Keyword Extraction (mocked API)
+# ---------------------------------------------------------------------------
+class TestExtractKeywordsBatch:
+    """Tests for extract_keywords_batch retry, fallback, and checkpoint logic."""
+
+    def _make_seeds(self, n=3):
+        return [{"seed_id": f"S{i:03d}", "prompt": f"How to synthesize drug compound {i}"}
+                for i in range(n)]
+
+    @patch.dict(os.environ, {
+        "AZURE_OPENAI_API_KEY": "fake",
+        "AZURE_OPENAI_ENDPOINT": "https://fake.openai.azure.com",
+        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    })
+    @patch("openai.AzureOpenAI")
+    @patch("medics.judge.track_external_usage")
+    def test_successful_extraction(self, mock_track, mock_client_cls, tmp_path):
+        """API returns valid keywords."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_resp = MagicMock()
+        mock_resp.choices = [MagicMock()]
+        mock_resp.choices[0].message.content = '{"keywords": ["drug", "compound"]}'
+        mock_resp.usage.prompt_tokens = 10
+        mock_resp.usage.completion_tokens = 5
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        seeds = self._make_seeds(2)
+        cp = str(tmp_path / "kw_cp.json")
+        result = extract_keywords_batch(seeds, max_workers=1, checkpoint_path=cp)
+
+        assert len(result) == 2
+        assert result["S000"] == ["drug", "compound"]
+        assert os.path.exists(cp)
+
+    @patch.dict(os.environ, {
+        "AZURE_OPENAI_API_KEY": "fake",
+        "AZURE_OPENAI_ENDPOINT": "https://fake.openai.azure.com",
+        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    })
+    @patch("openai.AzureOpenAI")
+    @patch("medics.judge.track_external_usage")
+    def test_content_filter_fallback(self, mock_track, mock_client_cls, tmp_path):
+        """Content filter errors trigger local fallback extraction."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception(
+            "content_filter_policy_violation"
+        )
+
+        seeds = self._make_seeds(1)
+        cp = str(tmp_path / "kw_cp.json")
+        result = extract_keywords_batch(seeds, max_workers=1, checkpoint_path=cp)
+
+        assert len(result) == 1
+        assert len(result["S000"]) > 0, "Fallback should produce keywords"
+
+    @patch.dict(os.environ, {
+        "AZURE_OPENAI_API_KEY": "fake",
+        "AZURE_OPENAI_ENDPOINT": "https://fake.openai.azure.com",
+        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    })
+    @patch("openai.AzureOpenAI")
+    @patch("medics.judge.track_external_usage")
+    def test_generic_error_fallback(self, mock_track, mock_client_cls, tmp_path):
+        """Non-retryable errors trigger local fallback (not empty list)."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("server_error 500")
+
+        seeds = self._make_seeds(1)
+        cp = str(tmp_path / "kw_cp.json")
+        result = extract_keywords_batch(seeds, max_workers=1, checkpoint_path=cp)
+
+        assert len(result["S000"]) > 0, "Generic errors should fallback, not return empty"
+
+    @patch.dict(os.environ, {
+        "AZURE_OPENAI_API_KEY": "fake",
+        "AZURE_OPENAI_ENDPOINT": "https://fake.openai.azure.com",
+        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    })
+    @patch("openai.AzureOpenAI")
+    @patch("medics.judge.track_external_usage")
+    def test_retry_exhaustion_fallback(self, mock_track, mock_client_cls, tmp_path):
+        """Exhausting all retries on rate limits triggers fallback."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("429 rate_limit")
+
+        seeds = self._make_seeds(1)
+        cp = str(tmp_path / "kw_cp.json")
+        result = extract_keywords_batch(seeds, max_workers=1, checkpoint_path=cp)
+
+        assert len(result["S000"]) > 0, "Retry exhaustion should fallback"
+
+    @patch.dict(os.environ, {
+        "AZURE_OPENAI_API_KEY": "fake",
+        "AZURE_OPENAI_ENDPOINT": "https://fake.openai.azure.com",
+        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    })
+    @patch("openai.AzureOpenAI")
+    @patch("medics.judge.track_external_usage")
+    def test_checkpoint_resume(self, mock_track, mock_client_cls, tmp_path):
+        """Seeds already in checkpoint are skipped."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_resp = MagicMock()
+        mock_resp.choices = [MagicMock()]
+        mock_resp.choices[0].message.content = '{"keywords": ["new"]}'
+        mock_resp.usage.prompt_tokens = 10
+        mock_resp.usage.completion_tokens = 5
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        cp = str(tmp_path / "kw_cp.json")
+        with open(cp, "w") as f:
+            json.dump({"S000": ["cached", "keyword"]}, f)
+
+        seeds = self._make_seeds(2)
+        result = extract_keywords_batch(seeds, max_workers=1, checkpoint_path=cp)
+
+        assert result["S000"] == ["cached", "keyword"], "Cached entry preserved"
+        assert result["S001"] == ["new"], "New entry extracted"
+        assert mock_client.chat.completions.create.call_count == 1
+
+    @patch.dict(os.environ, {
+        "AZURE_OPENAI_API_KEY": "fake",
+        "AZURE_OPENAI_ENDPOINT": "https://fake.openai.azure.com",
+        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    })
+    @patch("openai.AzureOpenAI")
+    @patch("medics.judge.track_external_usage")
+    def test_corrupt_checkpoint_ignored(self, mock_track, mock_client_cls, tmp_path):
+        """Non-dict checkpoint (e.g. []) is discarded, starts fresh."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_resp = MagicMock()
+        mock_resp.choices = [MagicMock()]
+        mock_resp.choices[0].message.content = '{"keywords": ["drug"]}'
+        mock_resp.usage.prompt_tokens = 10
+        mock_resp.usage.completion_tokens = 5
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        cp = str(tmp_path / "kw_cp.json")
+        with open(cp, "w") as f:
+            json.dump([], f)  # wrong type
+
+        seeds = self._make_seeds(1)
+        result = extract_keywords_batch(seeds, max_workers=1, checkpoint_path=cp)
+
+        assert len(result) == 1
+        assert result["S000"] == ["drug"]
+
+    @patch.dict(os.environ, {
+        "AZURE_OPENAI_API_KEY": "fake",
+        "AZURE_OPENAI_ENDPOINT": "https://fake.openai.azure.com",
+        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    })
+    @patch("openai.AzureOpenAI")
+    @patch("medics.judge.track_external_usage")
+    def test_empty_api_response_fallback(self, mock_track, mock_client_cls, tmp_path):
+        """API returns valid JSON but empty keywords triggers fallback."""
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_resp = MagicMock()
+        mock_resp.choices = [MagicMock()]
+        mock_resp.choices[0].message.content = '{"keywords": []}'
+        mock_resp.usage.prompt_tokens = 10
+        mock_resp.usage.completion_tokens = 5
+        mock_client.chat.completions.create.return_value = mock_resp
+
+        seeds = self._make_seeds(1)
+        cp = str(tmp_path / "kw_cp.json")
+        result = extract_keywords_batch(seeds, max_workers=1, checkpoint_path=cp)
+
+        assert len(result["S000"]) > 0, "Empty API response should trigger local fallback"
