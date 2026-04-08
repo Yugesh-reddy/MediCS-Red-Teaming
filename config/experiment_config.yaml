@@ -109,7 +109,7 @@ target_model:
 
 defense:
   sft:
-    prefix_recovery_upsample: 1
+    prefix_recovery_upsample: 3
     lora:
       r: 32
       alpha: 64
@@ -126,6 +126,7 @@ defense:
     training:
       num_epochs: 3
       per_device_batch_size: 2
+      per_device_eval_batch_size: 1
       gradient_accumulation_steps: 8
       gradient_checkpointing: true
       learning_rate: 3.0e-4
