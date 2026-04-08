@@ -30,12 +30,18 @@ def main():
     parser.add_argument("--rebuild-from-cache", action="store_true",
                         help="Rebuild SFT data from cached refusals/helpful ($0 API)")
     parser.add_argument("--config", default="config/experiment_config.yaml")
+    parser.add_argument("--prefix-recovery-upsample", type=int, default=None,
+                        help="Override prefix_recovery_upsample from config (graduated: 1->2->3)")
     args = parser.parse_args()
+    if args.prefix_recovery_upsample is not None and args.prefix_recovery_upsample < 1:
+        parser.error("--prefix-recovery-upsample must be >= 1")
 
     rounds = [int(r) for r in args.rounds.split(",")]
     cfg = load_config(args.config)
     sft_cfg = cfg.get("defense", {}).get("sft", {})
-    prefix_upsample = sft_cfg.get("prefix_recovery_upsample", 3)
+    prefix_upsample = (args.prefix_recovery_upsample
+                        if args.prefix_recovery_upsample is not None
+                        else sft_cfg.get("prefix_recovery_upsample", 3))
 
     # Ensure output dir exists
     Path("data/defense").mkdir(parents=True, exist_ok=True)
