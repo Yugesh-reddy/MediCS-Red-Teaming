@@ -1,0 +1,149 @@
+[
+  {
+    "phase": "Attack Round",
+    "duration_sec": 108.62,
+    "duration_min": 1.81,
+    "gpu": false,
+    "timestamp": "2026-04-08 05:42:42"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 114.12,
+    "duration_min": 1.9,
+    "gpu": false,
+    "timestamp": "2026-04-08 06:32:27"
+  },
+  {
+    "phase": "Inference",
+    "duration_sec": 2251.13,
+    "duration_min": 37.52,
+    "gpu": true,
+    "timestamp": "2026-04-08 07:10:07"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 370.37,
+    "duration_min": 6.17,
+    "gpu": false,
+    "timestamp": "2026-04-08 07:16:21"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 103.81,
+    "duration_min": 1.73,
+    "gpu": false,
+    "timestamp": "2026-04-08 13:47:35"
+  },
+  {
+    "phase": "Inference",
+    "duration_sec": 5233.56,
+    "duration_min": 87.23,
+    "gpu": true,
+    "timestamp": "2026-04-08 15:15:10"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 344.0,
+    "duration_min": 5.73,
+    "gpu": false,
+    "timestamp": "2026-04-08 15:21:00"
+  },
+  {
+    "phase": "Inference",
+    "duration_sec": 2421.11,
+    "duration_min": 40.35,
+    "gpu": true,
+    "timestamp": "2026-04-08 16:06:20"
+  },
+  {
+    "phase": "Defense Data Construction",
+    "duration_sec": 4565.27,
+    "duration_min": 76.09,
+    "gpu": false,
+    "timestamp": "2026-04-08 17:28:58"
+  },
+  {
+    "phase": "Defense Data Construction",
+    "duration_sec": 0.84,
+    "duration_min": 0.01,
+    "gpu": false,
+    "timestamp": "2026-04-08 18:00:05"
+  },
+  {
+    "phase": "SFT Training",
+    "duration_sec": 3695.42,
+    "duration_min": 61.59,
+    "gpu": true,
+    "timestamp": "2026-04-08 19:01:53"
+  },
+  {
+    "phase": "Inference",
+    "duration_sec": 2712.77,
+    "duration_min": 45.21,
+    "gpu": true,
+    "timestamp": "2026-04-08 19:47:55"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 546.48,
+    "duration_min": 9.11,
+    "gpu": false,
+    "timestamp": "2026-04-08 20:35:21"
+  },
+  {
+    "phase": "Inference",
+    "duration_sec": 10383.55,
+    "duration_min": 173.06,
+    "gpu": true,
+    "timestamp": "2026-04-08 23:28:33"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 236.15,
+    "duration_min": 3.94,
+    "gpu": false,
+    "timestamp": "2026-04-08 23:34:57"
+  },
+  {
+    "phase": "Defense Data Construction",
+    "duration_sec": 3721.73,
+    "duration_min": 62.03,
+    "gpu": false,
+    "timestamp": "2026-04-09 00:40:55"
+  },
+  {
+    "phase": "SFT Training",
+    "duration_sec": 4878.29,
+    "duration_min": 81.3,
+    "gpu": true,
+    "timestamp": "2026-04-09 02:02:24"
+  },
+  {
+    "phase": "Inference",
+    "duration_sec": 3007.1,
+    "duration_min": 50.12,
+    "gpu": true,
+    "timestamp": "2026-04-10 08:39:39"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 640.64,
+    "duration_min": 10.68,
+    "gpu": false,
+    "timestamp": "2026-04-10 08:50:29"
+  },
+  {
+    "phase": "Inference",
+    "duration_sec": 8179.1,
+    "duration_min": 136.32,
+    "gpu": true,
+    "timestamp": "2026-04-10 11:06:57"
+  },
+  {
+    "phase": "Attack Round",
+    "duration_sec": 287.65,
+    "duration_min": 4.79,
+    "gpu": false,
+    "timestamp": "2026-04-10 11:11:48"
+  }
+]
