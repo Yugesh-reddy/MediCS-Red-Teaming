@@ -11,7 +11,8 @@ Modules:
     attacks        — 5 attack strategy functions (CS, RP, MTE, CS-RP, CS-OBF)
     defense        — SFT/DPO data construction
     metrics        — ASR, RG, HR, FRR, bootstrap CI, McNemar, Cohen's h, residual analysis
-    figures        — 10 publication-quality figure generators
+    fairness       — Algorithmic fairness metrics (DI, EO, Gini, Theil, counterfactual)
+    figures        — 12 publication-quality figure generators
     tokenization   — Token fragmentation analysis (WHY code-switching works)
     detection      — Perplexity-based detection baseline
     timing         — Computational cost tracking (wall-clock, GPU hours)
@@ -30,8 +31,11 @@ Usage:
                                 compute_residual_failure_breakdown)
     from medics.tokenization import analyze_tokenization, compute_fragmentation_summary
     from medics.detection import perplexity_detector, detection_by_language
+    from medics.fairness import (disparate_impact_ratio, equal_opportunity_gap,
+                                  gini_coefficient, counterfactual_fairness,
+                                  defense_equity_report, full_fairness_report)
     from medics.timing import timed_phase, save_timing_report, compute_gpu_hours
     from medics.ethics import generate_ethics_statement, format_ethics_section
 """
 
-__version__ = "2.4.0"
+__version__ = "2.5.0"
