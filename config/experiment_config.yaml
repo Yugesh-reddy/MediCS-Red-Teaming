@@ -155,6 +155,7 @@ defense:
     training:
       num_epochs: 1
       per_device_batch_size: 1
+      per_device_eval_batch_size: 1
       gradient_accumulation_steps: 16
       learning_rate: 5.0e-5
       beta: 0.1
@@ -191,7 +192,17 @@ analysis:
     output_dir: "results/analysis"
   timing:
     output_path: "results/timing_report.json"
-  figures_total: 10
+  fairness:
+    n_benign_cs_samples: 100
+    benign_cs_seed: 42
+    di_threshold: 0.8
+    # eo_gap_threshold=0.05 is tight given ~33 samples per language cell
+    # (200 attacks / 6 langs). Report a sensitivity table at 0.05 and 0.10
+    # in the paper; both values pass through to disparate_impact_ratio /
+    # equalized_odds_gap via analysis.fairness.
+    eo_gap_threshold: 0.05
+    output_dir: "results/fairness"
+  figures_total: 12
 
 paths:
   root: "MediCS"
@@ -206,4 +217,6 @@ paths:
   attack_results: "results/attacks"
   eval_results: "results/eval"
   transfer_results: "results/transfer"
+  fairness_data: "data/fairness"
+  fairness_results: "results/fairness"
   figures: "figures"
