@@ -647,15 +647,15 @@
   },
   "global_alpha": [
     33.0,
-    25.0,
-    15.0,
+    24.0,
+    20.0,
     32.0,
     39.0
   ],
   "global_beta": [
     44.0,
-    52.0,
-    64.0,
+    53.0,
+    59.0,
     62.0,
     44.0
   ],
@@ -696,14 +696,14 @@
       "alpha": [
         5.0,
         1.0,
-        1.0,
+        2.0,
         5.0,
         7.0
       ],
       "beta": [
         11.0,
         12.0,
-        16.0,
+        15.0,
         9.0,
         11.0
       ]
@@ -712,14 +712,14 @@
       "alpha": [
         6.0,
         6.0,
-        5.0,
+        6.0,
         6.0,
         12.0
       ],
       "beta": [
         7.0,
         11.0,
-        10.0,
+        9.0,
         12.0,
         1.0
       ]
@@ -743,15 +743,15 @@
     "UCA": {
       "alpha": [
         7.0,
-        6.0,
-        6.0,
+        5.0,
+        9.0,
         7.0,
         4.0
       ],
       "beta": [
         7.0,
-        10.0,
-        14.0,
+        11.0,
+        11.0,
         10.0,
         6.0
       ]
@@ -2163,1400 +2163,1400 @@
       "arm_idx": 4,
       "reward": 0.0,
       "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143246"
+      "timestamp": "2026-04-16T08:40:57.188762"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 0.0,
       "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143268"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143276"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143283"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143290"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143296"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143303"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143309"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143315"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143322"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143328"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143335"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143347"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143353"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143360"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143384"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143390"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143397"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143403"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143409"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143415"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143421"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143428"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143434"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143440"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143447"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143453"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143460"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143466"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143472"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143478"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143484"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143491"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143497"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143504"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143510"
+      "timestamp": "2026-04-16T08:40:57.188778"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 1.0,
       "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143517"
+      "timestamp": "2026-04-16T08:40:57.188784"
     },
     {
-      "strategy": "RP",
-      "arm_idx": 1,
+      "strategy": "CS-RP",
+      "arm_idx": 3,
       "reward": 0.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143524"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143530"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143547"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143554"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143560"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143567"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143573"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143586"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143592"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143598"
+      "timestamp": "2026-04-16T08:40:57.188788"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143605"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143612"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143618"
+      "timestamp": "2026-04-16T08:40:57.188793"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143624"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143630"
+      "timestamp": "2026-04-16T08:40:57.188796"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143637"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143643"
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.188800"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143650"
+      "timestamp": "2026-04-16T08:40:57.188803"
     },
     {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
+      "strategy": "RP",
+      "arm_idx": 1,
       "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143656"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143662"
+      "timestamp": "2026-04-16T08:40:57.188807"
     },
     {
       "strategy": "CS-OBF",
       "arm_idx": 4,
       "reward": 0.0,
       "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143669"
+      "timestamp": "2026-04-16T08:40:57.188810"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188819"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188823"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.188826"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.188830"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.188834"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.188838"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143676"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143682"
+      "timestamp": "2026-04-16T08:40:57.188841"
     },
     {
       "strategy": "CS",
       "arm_idx": 0,
       "reward": 0.0,
       "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143688"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143695"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143701"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143707"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.143713"
+      "timestamp": "2026-04-16T08:40:57.188844"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143719"
+      "timestamp": "2026-04-16T08:40:57.188848"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.188851"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.143726"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
       "reward": 0.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143732"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143738"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143745"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143751"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143758"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143764"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.143770"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.143776"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143785"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.143791"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143797"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 1.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.143805"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144212"
+      "timestamp": "2026-04-16T08:40:57.188854"
     },
     {
       "strategy": "CS",
       "arm_idx": 0,
       "reward": 0.0,
       "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144221"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144228"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144234"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144240"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144247"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144253"
+      "timestamp": "2026-04-16T08:40:57.188857"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144259"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144266"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144272"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144278"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144285"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144291"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144297"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144303"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144309"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144316"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144322"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144328"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144334"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 1.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144341"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144347"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144353"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144360"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144366"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144372"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144378"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144385"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144391"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144397"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144406"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144412"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144418"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144424"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 1.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144431"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144437"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144443"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144449"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144455"
+      "timestamp": "2026-04-16T08:40:57.188861"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144461"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144468"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144474"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144480"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144487"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144493"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144500"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144506"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144512"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144518"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144524"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144530"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144537"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144543"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144549"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144555"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144561"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144567"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144573"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144580"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 1.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144586"
+      "timestamp": "2026-04-16T08:40:57.188864"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144592"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144598"
+      "timestamp": "2026-04-16T08:40:57.188868"
     },
     {
       "strategy": "CS",
       "arm_idx": 0,
       "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144604"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144611"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144617"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 1.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144623"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144629"
+      "timestamp": "2026-04-16T08:40:57.188871"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144635"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144642"
+      "timestamp": "2026-04-16T08:40:57.188879"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144648"
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.188883"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.188886"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.188889"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 0.0,
       "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144654"
+      "timestamp": "2026-04-16T08:40:57.188893"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.188896"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.188900"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.188905"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188908"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.188912"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188915"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144660"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144666"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144673"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144680"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144686"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144692"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144698"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144705"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144711"
+      "timestamp": "2026-04-16T08:40:57.188918"
     },
     {
       "strategy": "CS-OBF",
       "arm_idx": 4,
       "reward": 0.0,
       "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144717"
+      "timestamp": "2026-04-16T08:40:57.188922"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.188925"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 1.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144724"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144730"
+      "timestamp": "2026-04-16T08:40:57.188930"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144736"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144742"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144748"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144754"
-    },
-    {
-      "strategy": "RP",
-      "arm_idx": 1,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144761"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144767"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144773"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144779"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144785"
-    },
-    {
-      "strategy": "CS-OBF",
-      "arm_idx": 4,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144791"
-    },
-    {
-      "strategy": "MTE",
-      "arm_idx": 2,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144798"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
       "reward": 0.0,
       "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144804"
+      "timestamp": "2026-04-16T08:40:57.188933"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.188937"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.188940"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188943"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.188947"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.188950"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144810"
+      "timestamp": "2026-04-16T08:40:57.188954"
     },
     {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
+      "strategy": "MTE",
+      "arm_idx": 2,
       "reward": 0.0,
       "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144816"
+      "timestamp": "2026-04-16T08:40:57.188957"
     },
     {
       "strategy": "CS-OBF",
       "arm_idx": 4,
       "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144822"
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188960"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.188963"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.188967"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188970"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.188974"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.188978"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.188981"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144833"
+      "timestamp": "2026-04-16T08:40:57.188985"
     },
     {
-      "strategy": "RP",
-      "arm_idx": 1,
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
       "reward": 0.0,
       "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144839"
+      "timestamp": "2026-04-16T08:40:57.188990"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.188993"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.188997"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189002"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189005"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189008"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189011"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189015"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144845"
+      "timestamp": "2026-04-16T08:40:57.189018"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189021"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189024"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189028"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189032"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189035"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189038"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189042"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189045"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189049"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189052"
     },
     {
       "strategy": "CS",
       "arm_idx": 0,
       "reward": 0.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144851"
+      "timestamp": "2026-04-16T08:40:57.189068"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189072"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189075"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189385"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189390"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189393"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189397"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189400"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189404"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189407"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189411"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189414"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189417"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189420"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189424"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189427"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189430"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189433"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189437"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189441"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189444"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189447"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189450"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189454"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189457"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189460"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189464"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189467"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189471"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189474"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189477"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189480"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189483"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189488"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189491"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189495"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189498"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189502"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 1.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144857"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144864"
+      "timestamp": "2026-04-16T08:40:57.189505"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144871"
-    },
-    {
-      "strategy": "CS-RP",
-      "arm_idx": 3,
-      "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144882"
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189508"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144889"
+      "timestamp": "2026-04-16T08:40:57.189512"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144895"
+      "timestamp": "2026-04-16T08:40:57.189515"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
-      "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144902"
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189518"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189521"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144908"
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189525"
     },
     {
       "strategy": "CS",
       "arm_idx": 0,
       "reward": 0.0,
-      "category": "TOX",
-      "timestamp": "2026-04-08T23:34:57.144914"
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189528"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189532"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189553"
     },
     {
       "strategy": "CS-OBF",
       "arm_idx": 4,
       "reward": 0.0,
       "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144921"
+      "timestamp": "2026-04-16T08:40:57.189557"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189560"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189565"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189568"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189572"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189575"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189579"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189582"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189585"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189589"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189592"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189596"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189599"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189603"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189606"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "PPV",
-      "timestamp": "2026-04-08T23:34:57.144927"
+      "timestamp": "2026-04-16T08:40:57.189609"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
-      "category": "ULP",
-      "timestamp": "2026-04-08T23:34:57.144933"
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189612"
     },
     {
       "strategy": "CS",
       "arm_idx": 0,
       "reward": 0.0,
       "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144939"
+      "timestamp": "2026-04-16T08:40:57.189616"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189619"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189623"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189626"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189629"
     },
     {
       "strategy": "CS-RP",
       "arm_idx": 3,
       "reward": 0.0,
       "category": "SH",
-      "timestamp": "2026-04-08T23:34:57.144945"
+      "timestamp": "2026-04-16T08:40:57.189633"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189637"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189640"
     },
     {
       "strategy": "MTE",
       "arm_idx": 2,
       "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144952"
-    },
-    {
-      "strategy": "CS",
-      "arm_idx": 0,
-      "reward": 0.0,
-      "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144958"
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189644"
     },
     {
       "strategy": "RP",
       "arm_idx": 1,
       "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189647"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189650"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189654"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189658"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189661"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
       "category": "MIS",
-      "timestamp": "2026-04-08T23:34:57.144964"
+      "timestamp": "2026-04-16T08:40:57.189664"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189667"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189671"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189674"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189682"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189685"
     },
     {
       "strategy": "CS",
       "arm_idx": 0,
       "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189689"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189692"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189696"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144970"
+      "timestamp": "2026-04-16T08:40:57.189700"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189703"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189706"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189710"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189713"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189716"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189719"
     },
     {
       "strategy": "CS-OBF",
       "arm_idx": 4,
       "reward": 0.0,
       "category": "UCA",
-      "timestamp": "2026-04-08T23:34:57.144976"
+      "timestamp": "2026-04-16T08:40:57.189723"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189726"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189730"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189733"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189737"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189740"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189743"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189747"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189750"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189753"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 1.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189757"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189760"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189764"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189767"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189770"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189774"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189777"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189780"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "TOX",
+      "timestamp": "2026-04-16T08:40:57.189784"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189787"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "PPV",
+      "timestamp": "2026-04-16T08:40:57.189792"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "ULP",
+      "timestamp": "2026-04-16T08:40:57.189796"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189799"
+    },
+    {
+      "strategy": "CS-RP",
+      "arm_idx": 3,
+      "reward": 0.0,
+      "category": "SH",
+      "timestamp": "2026-04-16T08:40:57.189802"
+    },
+    {
+      "strategy": "MTE",
+      "arm_idx": 2,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189806"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189809"
+    },
+    {
+      "strategy": "RP",
+      "arm_idx": 1,
+      "reward": 0.0,
+      "category": "MIS",
+      "timestamp": "2026-04-16T08:40:57.189812"
+    },
+    {
+      "strategy": "CS",
+      "arm_idx": 0,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189815"
+    },
+    {
+      "strategy": "CS-OBF",
+      "arm_idx": 4,
+      "reward": 0.0,
+      "category": "UCA",
+      "timestamp": "2026-04-16T08:40:57.189818"
     }
   ]
 }
