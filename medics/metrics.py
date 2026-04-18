@@ -198,6 +198,115 @@ def bootstrap_ci(values, n_bootstrap=10000, confidence=0.95, seed=42):
     )
 
 
+def paired_bootstrap_delta_ci(before_labels, after_labels, n_bootstrap=10000,
+                              confidence=0.95, seed=42):
+    """
+    Paired bootstrap CI on the delta of a binary rate (e.g. ΔASR = ASR_after - ASR_before).
+
+    Resamples *row indices* (one index per pair) rather than each sample
+    independently. This is the correct way to build CIs on a delta when the
+    same prompts are evaluated under both conditions — it accounts for the
+    covariance between before/after and yields tighter bounds than unpaired CIs.
+
+    Args:
+        before_labels: 0/1 array (1 = harmful for ASR, or refused for FRR, etc.)
+        after_labels:  0/1 array aligned element-wise with before_labels
+        n_bootstrap: number of resamples
+        confidence: two-sided confidence level (default 0.95)
+        seed: RNG seed for reproducibility
+
+    Returns:
+        dict with delta_mean, ci (lower, upper), rate_before, rate_after, n
+    """
+    before = np.asarray(before_labels, dtype=float)
+    after = np.asarray(after_labels, dtype=float)
+    if before.shape != after.shape:
+        raise ValueError(
+            f"Paired bootstrap requires aligned arrays: "
+            f"got {before.shape} vs {after.shape}. Match by seed_id first."
+        )
+    n = len(before)
+    if n == 0:
+        return {
+            "delta_mean": 0.0,
+            "ci": [0.0, 0.0],
+            "rate_before": 0.0,
+            "rate_after": 0.0,
+            "n": 0,
+        }
+
+    rng = np.random.RandomState(seed)
+    indices = rng.randint(0, n, size=(n_bootstrap, n))
+    before_boot = before[indices].mean(axis=1)
+    after_boot = after[indices].mean(axis=1)
+    delta_boot = after_boot - before_boot
+
+    alpha = (1 - confidence) / 2
+    return {
+        "delta_mean": float(after.mean() - before.mean()),
+        "ci": [
+            float(np.percentile(delta_boot, alpha * 100)),
+            float(np.percentile(delta_boot, (1 - alpha) * 100)),
+        ],
+        "rate_before": float(before.mean()),
+        "rate_after": float(after.mean()),
+        "n": n,
+    }
+
+
+def holm_bonferroni(pvalues, alpha=0.05):
+    """
+    Holm-Bonferroni correction for multiple comparisons.
+
+    Less conservative than plain Bonferroni: sorts p-values ascending, then
+    tests each against alpha / (m - rank) until the first failure. All
+    subsequent tests automatically fail.
+
+    Args:
+        pvalues: dict {label: p} or list of (label, p) tuples
+        alpha: family-wise error rate
+
+    Returns:
+        dict with per-test adjusted p-values, reject decisions, and overall
+        summary. Reject = True means the null is rejected at the family-wise
+        alpha level after correction.
+    """
+    if isinstance(pvalues, dict):
+        items = list(pvalues.items())
+    else:
+        items = list(pvalues)
+    if not items:
+        return {"results": {}, "n_tests": 0, "any_significant": False,
+                "family_alpha": alpha}
+
+    m = len(items)
+    # Sort ascending by p; track original order
+    ordered = sorted(enumerate(items), key=lambda x: x[1][1])
+    results = {}
+    reject_cutoff_hit = False
+    for rank, (orig_idx, (label, p)) in enumerate(ordered):
+        adj_threshold = alpha / (m - rank)
+        if reject_cutoff_hit:
+            reject = False
+        else:
+            reject = p <= adj_threshold
+            if not reject:
+                reject_cutoff_hit = True
+        results[label] = {
+            "p_raw": float(p),
+            "rank": rank + 1,
+            "adj_threshold": round(adj_threshold, 6),
+            "reject_null": reject,
+        }
+    return {
+        "results": results,
+        "n_tests": m,
+        "any_significant": any(r["reject_null"] for r in results.values()),
+        "family_alpha": alpha,
+        "method": "holm_bonferroni",
+    }
+
+
 def mcnemar_test(before_correct, after_correct):
     """
     McNemar's test for paired comparison across model checkpoints.
