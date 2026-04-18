@@ -1,7 +1,7 @@
 """
 MediCS — Publication Figure Generation
 ========================================
-10 publication-quality figures from evaluation results.
+12 publication-quality figures from evaluation results.
 All plotting logic lives here; scripts/05_generate_figures.py orchestrates.
 """
 
@@ -472,3 +472,179 @@ def fig10_perplexity_detection(figures_dir):
     fig.savefig(f"{figures_dir}/fig10_perplexity_detection.pdf", bbox_inches='tight')
     plt.close()
     print("  Figure 10: Perplexity Detection Baseline")
+
+
+def fig11_fairness_dashboard(results_dir, figures_dir):
+    """Fairness Dashboard — 2x2 panel: DI ratio, Gini trend, counterfactual, intersectional."""
+    from medics.fairness import (
+        disparate_impact_ratio, gini_coefficient,
+        counterfactual_fairness, intersectional_analysis,
+    )
+
+    checkpoints = ["base", "sft", "dpo"]
+    stage_labels = ["Base", "+SFT", "+SFT+DPO"]
+
+    # Collect per-checkpoint data
+    di_ratios = {}
+    gini_vals = {}
+    cf_data = {}
+    inter_matrix = None
+
+    for ckpt, label in zip(checkpoints, stage_labels):
+        results = _find_held_out(results_dir, ckpt)
+        if not results:
+            continue
+        lang_asr = compute_per_language_asr(results)
+        defense_rates = {l: 1.0 - a for l, a in lang_asr.items()}
+
+        di = disparate_impact_ratio(defense_rates)
+        di_ratios[label] = di.get("ratio", 0)
+        gini_vals[label] = gini_coefficient(lang_asr)
+
+        cf = counterfactual_fairness(results)
+        cf_data[label] = cf.get("consistency_rate", 1.0)
+
+        if ckpt == "dpo":
+            inter_matrix = intersectional_analysis(results).get("matrix", {})
+
+    if not di_ratios:
+        print("  Figure 11: No data")
+        return
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    # (a) Disparate Impact Ratio
+    ax = axes[0, 0]
+    stages = list(di_ratios.keys())
+    vals = [di_ratios[s] for s in stages]
+    colors = ["#e74c3c", "#f39c12", "#27ae60"][:len(stages)]
+    ax.bar(stages, vals, color=colors, edgecolor='white', linewidth=2, width=0.5)
+    ax.axhline(y=0.8, color='red', linestyle='--', linewidth=2, alpha=0.7, label='4/5 threshold')
+    ax.set_ylabel('Disparate Impact Ratio', fontsize=12)
+    ax.set_title('(a) Disparate Impact (4/5 Rule)', fontsize=13, fontweight='bold')
+    ax.set_ylim(0, 1.1)
+    ax.legend(fontsize=10)
+
+    # (b) Gini coefficient trend
+    ax = axes[0, 1]
+    stages_g = list(gini_vals.keys())
+    ax.plot(stages_g, [gini_vals[s] for s in stages_g], 'o-', color='#2c3e50',
+            linewidth=2, markersize=8)
+    ax.set_ylabel('Gini Coefficient', fontsize=12)
+    ax.set_title('(b) ASR Inequality Across Languages', fontsize=13, fontweight='bold')
+    ax.set_ylim(0, max(gini_vals.values()) * 1.5 + 0.05)
+
+    # (c) Counterfactual fairness
+    ax = axes[1, 0]
+    stages_c = list(cf_data.keys())
+    vals_c = [cf_data[s] * 100 for s in stages_c]
+    ax.bar(stages_c, vals_c, color=colors[:len(stages_c)], edgecolor='white',
+           linewidth=2, width=0.5)
+    ax.set_ylabel('Consistency (%)', fontsize=12)
+    ax.set_title('(c) Counterfactual Fairness', fontsize=13, fontweight='bold')
+    ax.set_ylim(0, 105)
+
+    # (d) Intersectional heatmap (DPO checkpoint)
+    ax = axes[1, 1]
+    if inter_matrix:
+        langs = sorted(inter_matrix.keys())
+        cats = sorted(set(c for l in inter_matrix.values() for c in l))
+        data = np.array([[inter_matrix.get(l, {}).get(c, 0) for c in cats] for l in langs])
+        im = ax.imshow(data, cmap='YlOrRd', aspect='auto', vmin=0, vmax=1)
+        ax.set_xticks(range(len(cats)))
+        ax.set_xticklabels(cats, fontsize=9, rotation=45)
+        ax.set_yticks(range(len(langs)))
+        ax.set_yticklabels(langs, fontsize=9)
+        plt.colorbar(im, ax=ax, label='ASR', shrink=0.8)
+    ax.set_title('(d) Intersectional ASR (DPO)', fontsize=13, fontweight='bold')
+
+    plt.suptitle('Algorithmic Fairness Dashboard', fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig11_fairness_dashboard.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig11_fairness_dashboard.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 11: Fairness Dashboard")
+
+
+def fig12_safety_fairness_tradeoff(results_dir, figures_dir):
+    """Safety-Fairness Tradeoff — scatter + FRR comparison."""
+    from medics.fairness import equal_opportunity_gap
+
+    checkpoints = ["base", "sft", "dpo"]
+    stage_labels = ["Base", "+SFT", "+SFT+DPO"]
+    markers = ["o", "s", "D"]
+
+    asrs = []
+    eo_gaps = []
+    labels_plot = []
+
+    for ckpt, label in zip(checkpoints, stage_labels):
+        results = _find_held_out(results_dir, ckpt)
+        if not results:
+            continue
+        valid = [r for r in results if r.get("judge_label") != "error"]
+        overall_asr = sum(1 for r in valid if r.get("judge_label") == "harmful") / len(valid) if valid else 0
+        lang_asr = compute_per_language_asr(results)
+        defense_rates = {l: 1.0 - a for l, a in lang_asr.items()}
+        eo = equal_opportunity_gap(defense_rates)
+
+        asrs.append(overall_asr * 100)
+        eo_gaps.append(eo["max_gap"] * 100)
+        labels_plot.append(label)
+
+    if not asrs:
+        print("  Figure 12: No data")
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # (a) Safety-Fairness tradeoff scatter
+    ax = axes[0]
+    colors = ["#e74c3c", "#f39c12", "#27ae60"]
+    for i, (x, y, lab) in enumerate(zip(asrs, eo_gaps, labels_plot)):
+        ax.scatter(x, y, c=colors[i], s=150, marker=markers[i], zorder=5,
+                   edgecolors='black', linewidth=1.5)
+        ax.annotate(lab, (x, y), textcoords="offset points", xytext=(10, 5), fontsize=11)
+    ax.set_xlabel('Overall ASR (%)', fontsize=13)
+    ax.set_ylabel('Equal Opportunity Gap (%)', fontsize=13)
+    ax.set_title('(a) Safety vs Fairness Tradeoff', fontsize=13, fontweight='bold')
+
+    # (b) English FRR vs CS-benign FRR (if data exists)
+    ax = axes[1]
+    fairness_report = load_json("results/fairness/fairness_report.json")
+    plotted = False
+    if fairness_report:
+        # Use DPO checkpoint if available, else last available
+        for ckpt_key in ["dpo", "sft", "base"]:
+            rpt = fairness_report.get(ckpt_key, {})
+            if "per_language_frr" in rpt:
+                en_frr = rpt.get("english_frr", 0) * 100
+                per_lang = rpt["per_language_frr"]
+                langs = sorted(per_lang.keys())
+                x_pos = np.arange(len(langs))
+                width = 0.35
+                ax.bar(x_pos - width/2, [en_frr] * len(langs), width,
+                       label='English', color='#3498db', edgecolor='white')
+                ax.bar(x_pos + width/2, [per_lang[l] * 100 for l in langs], width,
+                       label='CS-Benign', color='#e74c3c', edgecolor='white')
+                ax.set_xticks(x_pos)
+                ax.set_xticklabels(langs, fontsize=10)
+                ax.set_ylabel('False Refusal Rate (%)', fontsize=12)
+                ax.legend(fontsize=10)
+                ax.set_title(f'(b) FRR: English vs CS-Benign ({ckpt_key.upper()})',
+                           fontsize=13, fontweight='bold')
+                plotted = True
+                break
+
+    if not plotted:
+        ax.text(0.5, 0.5, 'CS-benign FRR data\nnot yet available',
+                ha='center', va='center', transform=ax.transAxes, fontsize=14,
+                color='gray')
+        ax.set_title('(b) FRR: English vs CS-Benign', fontsize=13, fontweight='bold')
+
+    plt.suptitle('Safety-Fairness Tradeoff Analysis', fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig12_safety_fairness.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig12_safety_fairness.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 12: Safety-Fairness Tradeoff")
