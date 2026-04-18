@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate 10 publication-quality figures from evaluation results.
+Generate 12 publication-quality figures from evaluation results.
 
 Usage:
   python scripts/05_generate_figures.py --results-dir results/eval/
@@ -16,6 +16,8 @@ Figures:
   8. Semantic Preservation vs ASR
   9. Token Fragmentation by Language
   10. Perplexity Detection Baseline
+  11. Fairness Dashboard (DI, Gini, counterfactual, intersectional)
+  12. Safety-Fairness Tradeoff
 """
 
 import argparse
@@ -35,6 +37,8 @@ from medics.figures import (
     fig8_semantic_vs_asr,
     fig9_token_fragmentation,
     fig10_perplexity_detection,
+    fig11_fairness_dashboard,
+    fig12_safety_fairness_tradeoff,
 )
 
 
@@ -47,7 +51,7 @@ def main():
     figures_dir = Path(args.figures_dir)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    print("=== Generating 10 Publication Figures ===\n")
+    print("=== Generating 12 Publication Figures ===\n")
 
     fig1_asr_defense_stages(args.results_dir, figures_dir)
     fig2_strategy_heatmap(args.results_dir, figures_dir)
@@ -59,6 +63,8 @@ def main():
     fig8_semantic_vs_asr(figures_dir)
     fig9_token_fragmentation(figures_dir)
     fig10_perplexity_detection(figures_dir)
+    fig11_fairness_dashboard(args.results_dir, figures_dir)
+    fig12_safety_fairness_tradeoff(args.results_dir, figures_dir)
 
     print(f"\nAll figures saved to {figures_dir}/")
 
