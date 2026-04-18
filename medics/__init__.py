@@ -12,7 +12,7 @@ Modules:
     defense        — SFT/DPO data construction
     metrics        — ASR, RG, HR, FRR, bootstrap CI, McNemar, Cohen's h, residual analysis
     fairness       — Algorithmic fairness metrics (DI, EO, Gini, Theil, counterfactual)
-    figures        — 12 publication-quality figure generators
+    figures        — 15 publication-quality figure generators
     tokenization   — Token fragmentation analysis (WHY code-switching works)
     detection      — Perplexity-based detection baseline
     timing         — Computational cost tracking (wall-clock, GPU hours)
@@ -28,7 +28,8 @@ Usage:
     from medics.defense import build_sft_data, build_dpo_pairs
     from medics.metrics import (compute_asr, compute_all_metrics, bootstrap_ci,
                                 compute_cohens_h, compute_effect_sizes,
-                                compute_residual_failure_breakdown)
+                                compute_residual_failure_breakdown,
+                                paired_bootstrap_delta_ci, holm_bonferroni)
     from medics.tokenization import analyze_tokenization, compute_fragmentation_summary
     from medics.detection import perplexity_detector, detection_by_language
     from medics.fairness import (disparate_impact_ratio, equal_opportunity_gap,
@@ -38,4 +39,4 @@ Usage:
     from medics.ethics import generate_ethics_statement, format_ethics_section
 """
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
