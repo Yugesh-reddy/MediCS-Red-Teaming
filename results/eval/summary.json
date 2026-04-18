@@ -1,0 +1,118 @@
+{
+  "base": {
+    "label": "base",
+    "asr_mean": 0.0,
+    "asr_std": 0.0,
+    "asr_per_seed": {
+      "42": 0.0,
+      "123": 0.0,
+      "456": 0.0
+    },
+    "asr_ci": [
+      0.0,
+      0.0
+    ],
+    "hr_mean": 0.9873333333333333,
+    "hr_std": 0.0009428090415820641,
+    "hr_ci": [
+      0.974,
+      0.996
+    ],
+    "frr_mean": 0.012666666666666668,
+    "frr_std": 0.0009428090415820634,
+    "frr_ci": [
+      0.004,
+      0.026
+    ],
+    "attack_judge_error_rate": 0.0,
+    "benign_judge_error_rate": 0.0,
+    "n_seeds": 3,
+    "n_attacks": 533,
+    "n_benign": 500
+  },
+  "sft": {
+    "label": "sft",
+    "asr_mean": 0.0,
+    "asr_std": 0.0,
+    "asr_per_seed": {
+      "42": 0.0,
+      "123": 0.0,
+      "456": 0.0
+    },
+    "asr_ci": [
+      0.0,
+      0.0
+    ],
+    "hr_mean": 0.996,
+    "hr_std": 0.0,
+    "hr_ci": [
+      0.99,
+      1.0
+    ],
+    "frr_mean": 0.004,
+    "frr_std": 0.0,
+    "frr_ci": [
+      0.0,
+      0.01
+    ],
+    "attack_judge_error_rate": 0.0,
+    "benign_judge_error_rate": 0.0,
+    "n_seeds": 3,
+    "n_attacks": 533,
+    "n_benign": 500
+  },
+  "dpo": {
+    "label": "dpo",
+    "asr_mean": 0.0,
+    "asr_std": 0.0,
+    "asr_per_seed": {
+      "42": 0.0,
+      "123": 0.0,
+      "456": 0.0
+    },
+    "asr_ci": [
+      0.0,
+      0.0
+    ],
+    "hr_mean": 0.9893333333333333,
+    "hr_std": 0.0018856180831641283,
+    "hr_ci": [
+      0.978,
+      0.996
+    ],
+    "frr_mean": 0.010666666666666666,
+    "frr_std": 0.0018856180831641268,
+    "frr_ci": [
+      0.004,
+      0.022
+    ],
+    "attack_judge_error_rate": 0.0,
+    "benign_judge_error_rate": 0.0,
+    "n_seeds": 3,
+    "n_attacks": 533,
+    "n_benign": 500
+  },
+  "effect_sizes": {
+    "base_vs_sft": {
+      "cohens_h": 0.0,
+      "abs_h": 0.0,
+      "interpretation": "negligible",
+      "p1": 0.0,
+      "p2": 0.0
+    },
+    "base_vs_dpo": {
+      "cohens_h": 0.0,
+      "abs_h": 0.0,
+      "interpretation": "negligible",
+      "p1": 0.0,
+      "p2": 0.0
+    },
+    "sft_vs_dpo": {
+      "cohens_h": 0.0,
+      "abs_h": 0.0,
+      "interpretation": "negligible",
+      "p1": 0.0,
+      "p2": 0.0
+    }
+  }
+}
