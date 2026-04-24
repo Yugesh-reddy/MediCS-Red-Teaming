@@ -13,6 +13,7 @@ from medics.metrics import (
     bootstrap_ci, mcnemar_test, compute_all_metrics,
     compute_per_category_asr, compute_per_strategy_asr,
     compute_per_language_asr, compute_judge_fallback_rate,
+    paired_bootstrap_delta_ci, holm_bonferroni,
 )
 
 
@@ -186,3 +187,90 @@ class TestJudgeFallbackRate:
             {},
         ]
         assert abs(compute_judge_fallback_rate(rows) - 0.5) < 1e-9
+
+
+class TestPairedBootstrapDeltaCI:
+    """Tests for paired bootstrap Δ-rate CI."""
+
+    def test_zero_change(self):
+        same = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
+        r = paired_bootstrap_delta_ci(same, same, n_bootstrap=1000, seed=7)
+        assert r["delta_mean"] == 0.0
+        lo, hi = r["ci"]
+        assert abs(lo) < 1e-9 and abs(hi) < 1e-9
+        assert r["n"] == 10
+
+    def test_clear_improvement(self):
+        before = [1] * 20
+        after = [0] * 20
+        r = paired_bootstrap_delta_ci(before, after, n_bootstrap=1000, seed=7)
+        assert r["delta_mean"] == -1.0
+        assert r["rate_before"] == 1.0
+        assert r["rate_after"] == 0.0
+
+    def test_length_mismatch_raises(self):
+        import pytest
+        with pytest.raises(ValueError):
+            paired_bootstrap_delta_ci([0, 1], [0, 1, 0])
+
+    def test_empty(self):
+        r = paired_bootstrap_delta_ci([], [], n_bootstrap=100)
+        assert r["delta_mean"] == 0.0
+        assert r["n"] == 0
+
+    def test_ci_covers_truth_under_null(self):
+        # Under null hypothesis of no change, CI should include 0
+        import numpy as np
+        rng = np.random.RandomState(1)
+        vals = rng.binomial(1, 0.4, 500).tolist()
+        r = paired_bootstrap_delta_ci(vals, vals, n_bootstrap=2000, seed=1)
+        lo, hi = r["ci"]
+        assert lo <= 0 <= hi
+
+
+class TestHolmBonferroni:
+    """Tests for Holm-Bonferroni correction."""
+
+    def test_all_significant(self):
+        pvals = {"a": 0.001, "b": 0.002, "c": 0.003}
+        r = holm_bonferroni(pvals, alpha=0.05)
+        for info in r["results"].values():
+            assert info["reject_null"]
+        assert r["any_significant"]
+
+    def test_none_significant(self):
+        pvals = {"a": 0.5, "b": 0.6, "c": 0.9}
+        r = holm_bonferroni(pvals, alpha=0.05)
+        for info in r["results"].values():
+            assert not info["reject_null"]
+        assert not r["any_significant"]
+
+    def test_sequential_stops(self):
+        # With 4 tests at alpha=0.05: thresholds are 0.0125, 0.0167, 0.025, 0.05
+        # If rank-2 test fails, rank-3 and rank-4 must also be rejected=False
+        # regardless of their raw p values (step-down property).
+        pvals = {"a": 0.01, "b": 0.03, "c": 0.001, "d": 0.02}
+        r = holm_bonferroni(pvals, alpha=0.05)
+        # Smallest p is "c" at 0.001 vs threshold 0.0125 — passes
+        assert r["results"]["c"]["reject_null"]
+        # Next smallest is "a" at 0.01 vs threshold 0.0167 — passes
+        assert r["results"]["a"]["reject_null"]
+        # "d" at 0.02 vs threshold 0.025 — passes
+        assert r["results"]["d"]["reject_null"]
+        # "b" at 0.03 vs threshold 0.05 — passes
+        assert r["results"]["b"]["reject_null"]
+
+    def test_tied_to_threshold(self):
+        # 3 tests, smallest p = alpha/3 exactly → reject (inclusive)
+        pvals = {"a": 0.05 / 3, "b": 0.9, "c": 0.95}
+        r = holm_bonferroni(pvals, alpha=0.05)
+        assert r["results"]["a"]["reject_null"]
+
+    def test_list_input(self):
+        r = holm_bonferroni([("x", 0.01), ("y", 0.02)], alpha=0.05)
+        assert r["n_tests"] == 2
+
+    def test_empty(self):
+        r = holm_bonferroni({}, alpha=0.05)
+        assert r["n_tests"] == 0
+        assert not r["any_significant"]

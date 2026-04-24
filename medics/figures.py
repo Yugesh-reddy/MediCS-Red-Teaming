@@ -1,7 +1,7 @@
 """
 MediCS — Publication Figure Generation
 ========================================
-10 publication-quality figures from evaluation results.
+12 publication-quality figures from evaluation results.
 All plotting logic lives here; scripts/05_generate_figures.py orchestrates.
 """
 
@@ -472,3 +472,402 @@ def fig10_perplexity_detection(figures_dir):
     fig.savefig(f"{figures_dir}/fig10_perplexity_detection.pdf", bbox_inches='tight')
     plt.close()
     print("  Figure 10: Perplexity Detection Baseline")
+
+
+def fig11_fairness_dashboard(results_dir, figures_dir):
+    """Fairness Dashboard — 2x2 panel: DI ratio, Gini trend, counterfactual, intersectional."""
+    from medics.fairness import (
+        disparate_impact_ratio, gini_coefficient,
+        counterfactual_fairness, intersectional_analysis,
+    )
+
+    checkpoints = ["base", "sft", "dpo"]
+    stage_labels = ["Base", "+SFT", "+SFT+DPO"]
+
+    # Collect per-checkpoint data
+    di_ratios = {}
+    gini_vals = {}
+    cf_data = {}
+    inter_matrix = None
+
+    for ckpt, label in zip(checkpoints, stage_labels):
+        results = _find_held_out(results_dir, ckpt)
+        if not results:
+            continue
+        lang_asr = compute_per_language_asr(results)
+        defense_rates = {l: 1.0 - a for l, a in lang_asr.items()}
+
+        di = disparate_impact_ratio(defense_rates)
+        di_ratios[label] = di.get("ratio", 0)
+        gini_vals[label] = gini_coefficient(lang_asr)
+
+        cf = counterfactual_fairness(results)
+        cf_data[label] = cf.get("consistency_rate", 1.0)
+
+        if ckpt == "dpo":
+            inter_matrix = intersectional_analysis(results).get("matrix", {})
+
+    if not di_ratios:
+        print("  Figure 11: No data")
+        return
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    # (a) Disparate Impact Ratio
+    ax = axes[0, 0]
+    stages = list(di_ratios.keys())
+    vals = [di_ratios[s] for s in stages]
+    colors = ["#e74c3c", "#f39c12", "#27ae60"][:len(stages)]
+    ax.bar(stages, vals, color=colors, edgecolor='white', linewidth=2, width=0.5)
+    ax.axhline(y=0.8, color='red', linestyle='--', linewidth=2, alpha=0.7, label='4/5 threshold')
+    ax.set_ylabel('Disparate Impact Ratio', fontsize=12)
+    ax.set_title('(a) Disparate Impact (4/5 Rule)', fontsize=13, fontweight='bold')
+    ax.set_ylim(0, 1.1)
+    ax.legend(fontsize=10)
+
+    # (b) Gini coefficient trend
+    ax = axes[0, 1]
+    stages_g = list(gini_vals.keys())
+    ax.plot(stages_g, [gini_vals[s] for s in stages_g], 'o-', color='#2c3e50',
+            linewidth=2, markersize=8)
+    ax.set_ylabel('Gini Coefficient', fontsize=12)
+    ax.set_title('(b) ASR Inequality Across Languages', fontsize=13, fontweight='bold')
+    ax.set_ylim(0, max(gini_vals.values()) * 1.5 + 0.05)
+
+    # (c) Counterfactual fairness
+    ax = axes[1, 0]
+    stages_c = list(cf_data.keys())
+    vals_c = [cf_data[s] * 100 for s in stages_c]
+    ax.bar(stages_c, vals_c, color=colors[:len(stages_c)], edgecolor='white',
+           linewidth=2, width=0.5)
+    ax.set_ylabel('Consistency (%)', fontsize=12)
+    ax.set_title('(c) Counterfactual Fairness', fontsize=13, fontweight='bold')
+    ax.set_ylim(0, 105)
+
+    # (d) Intersectional heatmap (DPO checkpoint)
+    ax = axes[1, 1]
+    if inter_matrix:
+        langs = sorted(inter_matrix.keys())
+        cats = sorted(set(c for l in inter_matrix.values() for c in l))
+        data = np.array([[inter_matrix.get(l, {}).get(c, 0) for c in cats] for l in langs])
+        im = ax.imshow(data, cmap='YlOrRd', aspect='auto', vmin=0, vmax=1)
+        ax.set_xticks(range(len(cats)))
+        ax.set_xticklabels(cats, fontsize=9, rotation=45)
+        ax.set_yticks(range(len(langs)))
+        ax.set_yticklabels(langs, fontsize=9)
+        plt.colorbar(im, ax=ax, label='ASR', shrink=0.8)
+    ax.set_title('(d) Intersectional ASR (DPO)', fontsize=13, fontweight='bold')
+
+    plt.suptitle('Algorithmic Fairness Dashboard', fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig11_fairness_dashboard.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig11_fairness_dashboard.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 11: Fairness Dashboard")
+
+
+def fig12_safety_fairness_tradeoff(results_dir, figures_dir):
+    """Safety-Fairness Tradeoff — scatter + FRR comparison."""
+    from medics.fairness import equal_opportunity_gap
+
+    checkpoints = ["base", "sft", "dpo"]
+    stage_labels = ["Base", "+SFT", "+SFT+DPO"]
+    markers = ["o", "s", "D"]
+
+    asrs = []
+    eo_gaps = []
+    labels_plot = []
+
+    for ckpt, label in zip(checkpoints, stage_labels):
+        results = _find_held_out(results_dir, ckpt)
+        if not results:
+            continue
+        valid = [r for r in results if r.get("judge_label") != "error"]
+        overall_asr = sum(1 for r in valid if r.get("judge_label") == "harmful") / len(valid) if valid else 0
+        lang_asr = compute_per_language_asr(results)
+        defense_rates = {l: 1.0 - a for l, a in lang_asr.items()}
+        eo = equal_opportunity_gap(defense_rates)
+
+        asrs.append(overall_asr * 100)
+        eo_gaps.append(eo["max_gap"] * 100)
+        labels_plot.append(label)
+
+    if not asrs:
+        print("  Figure 12: No data")
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # (a) Safety-Fairness tradeoff scatter
+    ax = axes[0]
+    colors = ["#e74c3c", "#f39c12", "#27ae60"]
+    for i, (x, y, lab) in enumerate(zip(asrs, eo_gaps, labels_plot)):
+        ax.scatter(x, y, c=colors[i], s=150, marker=markers[i], zorder=5,
+                   edgecolors='black', linewidth=1.5)
+        ax.annotate(lab, (x, y), textcoords="offset points", xytext=(10, 5), fontsize=11)
+    ax.set_xlabel('Overall ASR (%)', fontsize=13)
+    ax.set_ylabel('Equal Opportunity Gap (%)', fontsize=13)
+    ax.set_title('(a) Safety vs Fairness Tradeoff', fontsize=13, fontweight='bold')
+
+    # (b) English FRR vs CS-benign FRR (if data exists)
+    ax = axes[1]
+    fairness_report = load_json("results/fairness/fairness_report.json")
+    plotted = False
+    if fairness_report:
+        # Use DPO checkpoint if available, else last available
+        for ckpt_key in ["dpo", "sft", "base"]:
+            rpt = fairness_report.get(ckpt_key, {})
+            if "per_language_frr" in rpt:
+                en_frr = rpt.get("english_frr", 0) * 100
+                per_lang = rpt["per_language_frr"]
+                langs = sorted(per_lang.keys())
+                x_pos = np.arange(len(langs))
+                width = 0.35
+                ax.bar(x_pos - width/2, [en_frr] * len(langs), width,
+                       label='English', color='#3498db', edgecolor='white')
+                ax.bar(x_pos + width/2, [per_lang[l] * 100 for l in langs], width,
+                       label='CS-Benign', color='#e74c3c', edgecolor='white')
+                ax.set_xticks(x_pos)
+                ax.set_xticklabels(langs, fontsize=10)
+                ax.set_ylabel('False Refusal Rate (%)', fontsize=12)
+                ax.legend(fontsize=10)
+                ax.set_title(f'(b) FRR: English vs CS-Benign ({ckpt_key.upper()})',
+                           fontsize=13, fontweight='bold')
+                plotted = True
+                break
+
+    if not plotted:
+        ax.text(0.5, 0.5, 'CS-benign FRR data\nnot yet available',
+                ha='center', va='center', transform=ax.transAxes, fontsize=14,
+                color='gray')
+        ax.set_title('(b) FRR: English vs CS-Benign', fontsize=13, fontweight='bold')
+
+    plt.suptitle('Safety-Fairness Tradeoff Analysis', fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig12_safety_fairness.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig12_safety_fairness.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 12: Safety-Fairness Tradeoff")
+
+
+def fig13_thompson_entropy(figures_dir):
+    """Thompson Sampling exploration — arm-selection entropy across rounds.
+
+    Entropy = -Σ p_i log2 p_i over the 5 arms, computed on each round's history.
+    High entropy late in training → bandit still exploring (failure mode).
+    Low entropy late → bandit has converged on a preferred arm.
+    """
+    bandit_paths = sorted(Path("results/attacks").glob("round_*/bandit_state.json"))
+    if not bandit_paths:
+        print("  Figure 13: No bandit states")
+        return
+
+    rounds = []
+    entropies = []
+    per_arm_rates_by_round = []
+    arms_master = None
+
+    for path in bandit_paths:
+        state = load_json(str(path))
+        if not state or "history" not in state:
+            continue
+        history = state["history"]
+        arms = state.get("arms", ["CS", "RP", "MTE", "CS-RP", "CS-OBF"])
+        if arms_master is None:
+            arms_master = arms
+        counts = {arm: 0 for arm in arms}
+        for h in history:
+            arm = h.get("strategy")
+            if arm in counts:
+                counts[arm] += 1
+        total = sum(counts.values())
+        if total == 0:
+            continue
+        probs = np.array([counts[a] / total for a in arms])
+        nonzero = probs[probs > 0]
+        ent = float(-np.sum(nonzero * np.log2(nonzero)))
+        round_num = int(path.parent.name.split("_")[-1])
+        rounds.append(round_num)
+        entropies.append(ent)
+        per_arm_rates_by_round.append(probs)
+
+    if not rounds:
+        print("  Figure 13: No bandit history")
+        return
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+    max_ent = np.log2(len(arms_master))
+    ax1.plot(rounds, entropies, 'o-', color='#2c3e50', linewidth=2.5, markersize=10)
+    ax1.axhline(max_ent, color='red', linestyle='--', linewidth=1.5,
+                label=f'Max entropy (uniform) = {max_ent:.2f}')
+    ax1.set_xlabel('Round', fontsize=12)
+    ax1.set_ylabel('Arm-Selection Entropy (bits)', fontsize=12)
+    ax1.set_title('(a) Bandit Exploration Over Rounds', fontsize=13, fontweight='bold')
+    ax1.set_ylim(0, max_ent * 1.1)
+    ax1.set_xticks(rounds)
+    ax1.legend(fontsize=10)
+
+    matrix = np.array(per_arm_rates_by_round).T  # arms × rounds
+    im = ax2.imshow(matrix, aspect='auto', cmap='YlGnBu', vmin=0, vmax=1)
+    ax2.set_yticks(range(len(arms_master)))
+    ax2.set_yticklabels(arms_master, fontsize=11)
+    ax2.set_xticks(range(len(rounds)))
+    ax2.set_xticklabels([f"R{r}" for r in rounds], fontsize=11)
+    ax2.set_title('(b) Per-Arm Selection Rate', fontsize=13, fontweight='bold')
+    plt.colorbar(im, ax=ax2, label='Selection rate', shrink=0.85)
+
+    plt.suptitle('Thompson Sampling Convergence Analysis', fontsize=15,
+                 fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig13_thompson_entropy.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig13_thompson_entropy.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 13: Thompson Sampling Entropy")
+
+
+def fig14_response_length(results_dir, figures_dir):
+    """Response length distributions — refusals vs compliance across checkpoints.
+
+    Short responses tend to be refusals; long responses tend to be compliance.
+    A DPO checkpoint whose harmful-response length collapses toward refusal
+    length indicates the defense is producing real refusals rather than
+    partially compliant text.
+    """
+    checkpoints = ["base", "sft", "dpo"]
+    records = []
+    for ckpt in checkpoints:
+        results = _find_held_out(results_dir, ckpt)
+        if not results:
+            continue
+        for r in results:
+            label = r.get("judge_label")
+            if label not in ("harmful", "safe"):
+                continue
+            resp = r.get("model_response", "") or ""
+            records.append({
+                "checkpoint": ckpt,
+                "label": label,
+                "length_chars": len(resp),
+                "length_words": len(resp.split()),
+            })
+
+    if not records:
+        print("  Figure 14: No judged data — run Cell 22 first")
+        return
+
+    df = pd.DataFrame(records)
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # Violin plot: word counts by checkpoint × label
+    stages = [c for c in checkpoints if c in df["checkpoint"].unique()]
+    palette = {"safe": "#27ae60", "harmful": "#e74c3c"}
+
+    ax = axes[0]
+    sns.violinplot(data=df, x="checkpoint", y="length_words", hue="label",
+                   order=stages, palette=palette, split=True,
+                   inner="quartile", ax=ax, cut=0)
+    ax.set_ylabel('Response length (words)', fontsize=12)
+    ax.set_xlabel('')
+    ax.set_title('(a) Response Length by Judgment', fontsize=13, fontweight='bold')
+    ax.legend(title='Judge', fontsize=10)
+    ax.set_ylim(0, df["length_words"].quantile(0.98))
+
+    # Median lengths table
+    ax = axes[1]
+    ax.axis('off')
+    summary = (
+        df.groupby(["checkpoint", "label"])["length_words"]
+        .agg(["median", "mean", "count"]).round(1).reset_index()
+    )
+    table_rows = [["Checkpoint", "Label", "Median", "Mean", "N"]]
+    for _, row in summary.iterrows():
+        table_rows.append([
+            str(row["checkpoint"]), str(row["label"]),
+            f"{row['median']:.0f}", f"{row['mean']:.0f}", f"{row['count']:.0f}",
+        ])
+    tbl = ax.table(cellText=table_rows[1:], colLabels=table_rows[0],
+                   loc='center', cellLoc='center')
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(10)
+    tbl.scale(1, 1.8)
+    ax.set_title('(b) Summary Statistics', fontsize=13, fontweight='bold')
+
+    plt.suptitle('Response Length Analysis', fontsize=15, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig14_response_length.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig14_response_length.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 14: Response Length Analysis")
+
+
+def fig15_strategy_by_category(figures_dir):
+    """Strategy × category heatmap on the attack-round data (which strategy
+    beats which harm category). Uses round_*/results.jsonl (all rounds merged)
+    because held-out eval is code-switch-only by construction.
+    """
+    results = []
+    for path in sorted(Path("results/attacks").glob("round_*/results.jsonl")):
+        results.extend(load_jsonl(str(path)))
+
+    if not results:
+        print("  Figure 15: No attack round results")
+        return
+
+    # Build cells: {(strategy, category): (harmful_count, total_valid)}
+    cells = {}
+    for r in results:
+        if r.get("judge_label") not in ("harmful", "safe"):
+            continue
+        key = (r.get("strategy", "?"), r.get("category", "?"))
+        h, t = cells.get(key, (0, 0))
+        t += 1
+        if r.get("judge_label") == "harmful":
+            h += 1
+        cells[key] = (h, t)
+
+    if not cells:
+        print("  Figure 15: No judged attack data")
+        return
+
+    strategies = sorted({k[0] for k in cells})
+    categories = sorted({k[1] for k in cells})
+    asr_matrix = np.full((len(strategies), len(categories)), np.nan)
+    support_matrix = np.zeros((len(strategies), len(categories)), dtype=int)
+    for i, s in enumerate(strategies):
+        for j, c in enumerate(categories):
+            h, t = cells.get((s, c), (0, 0))
+            support_matrix[i, j] = t
+            if t >= 3:
+                asr_matrix[i, j] = h / t
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(asr_matrix, cmap='YlOrRd', aspect='auto', vmin=0, vmax=1)
+    ax.set_xticks(range(len(categories)))
+    ax.set_xticklabels(categories, fontsize=11)
+    ax.set_yticks(range(len(strategies)))
+    ax.set_yticklabels(strategies, fontsize=11)
+    ax.set_xlabel('Harm Category', fontsize=12)
+    ax.set_ylabel('Attack Strategy', fontsize=12)
+    ax.set_title('ASR by Strategy × Category (all rounds)', fontsize=14,
+                 fontweight='bold')
+
+    for i in range(len(strategies)):
+        for j in range(len(categories)):
+            val = asr_matrix[i, j]
+            n = support_matrix[i, j]
+            if np.isnan(val):
+                txt = f"n={n}"
+                color = "gray"
+            else:
+                txt = f"{val:.0%}\n(n={n})"
+                color = "white" if val > 0.5 else "black"
+            ax.text(j, i, txt, ha='center', va='center', fontsize=9, color=color)
+
+    plt.colorbar(im, ax=ax, label='ASR', shrink=0.85)
+    plt.tight_layout()
+    fig.savefig(f"{figures_dir}/fig15_strategy_by_category.png", dpi=300, bbox_inches='tight')
+    fig.savefig(f"{figures_dir}/fig15_strategy_by_category.pdf", bbox_inches='tight')
+    plt.close()
+    print("  Figure 15: Strategy × Category Heatmap")

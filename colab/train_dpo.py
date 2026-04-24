@@ -144,6 +144,7 @@ def main():
         "output_dir": output_dir,
         "num_train_epochs": train_cfg["num_epochs"],
         "per_device_train_batch_size": train_cfg["per_device_batch_size"],
+        "per_device_eval_batch_size": train_cfg.get("per_device_eval_batch_size", 1),
         "gradient_accumulation_steps": train_cfg["gradient_accumulation_steps"],
         "learning_rate": train_cfg["learning_rate"],
         "beta": train_cfg["beta"],

@@ -118,6 +118,7 @@ def _build_sft_config_kwargs(train_cfg, output_dir, use_bf16, use_fp16):
         "output_dir": output_dir,
         "num_train_epochs": train_cfg["num_epochs"],
         "per_device_train_batch_size": train_cfg["per_device_batch_size"],
+        "per_device_eval_batch_size": train_cfg.get("per_device_eval_batch_size", 1),
         "gradient_accumulation_steps": train_cfg["gradient_accumulation_steps"],
         "learning_rate": train_cfg["learning_rate"],
         "lr_scheduler_type": train_cfg.get("lr_scheduler", "cosine"),

@@ -162,13 +162,16 @@ def _heavy_code_switch(seed: dict, keywords: dict, language: str,
 
     attack_prompt = " ".join(result_parts)
 
+    category = seed.get("category", "")
+    prefix = _RESPONSE_PREFIXES.get(category, _DEFAULT_PREFIX)
     return {
         "attack_prompt": attack_prompt,
         "original_prompt": prompt,
         "strategy": "CS",
         "language": language,
         "seed_id": seed.get("seed_id", ""),
-        "category": seed.get("category", ""),
+        "category": category,
+        "assistant_prefix": prefix,
         "keywords_translated": kw_list,
         "sentences_translated": translated_count,
         "sentences_total": len(sentences),
@@ -382,6 +385,7 @@ def apply_strategy(seed: dict, strategy: Strategy,
                 mte_source = "api"
 
         turn_text = "\n".join([f"[Turn {i+1}]: {t['content']}" for i, t in enumerate(turns)])
+        prefix = _RESPONSE_PREFIXES.get(category, _DEFAULT_PREFIX)
         return {
             "attack_prompt": turn_text,
             "attack_turns": turns,
@@ -393,7 +397,8 @@ def apply_strategy(seed: dict, strategy: Strategy,
             "n_turns": len(turns),
             "language": "en",
             "seed_id": seed.get("seed_id", ""),
-            "category": seed.get("category", ""),
+            "category": category,
+            "assistant_prefix": prefix,
         }
 
     elif strategy == "CS-RP":
@@ -413,15 +418,18 @@ def apply_strategy(seed: dict, strategy: Strategy,
         }
 
     elif strategy == "CS-OBF":
+        category = seed.get("category", "")
         cs = _heavy_code_switch(seed, keywords, language, rng)
         obfuscated = _build_cs_obf_prompt(cs["attack_prompt"], rng)
+        prefix = _RESPONSE_PREFIXES.get(category, _DEFAULT_PREFIX)
         return {
             "attack_prompt": obfuscated,
             "original_prompt": prompt,
             "strategy": "CS-OBF",
             "language": language,
             "seed_id": seed.get("seed_id", ""),
-            "category": seed.get("category", ""),
+            "category": category,
+            "assistant_prefix": prefix,
         }
 
     else:

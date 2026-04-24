@@ -26,6 +26,7 @@ from medics.metrics import (
     compute_all_metrics, mcnemar_test,
     compute_per_category_asr, compute_per_strategy_asr, compute_per_language_asr,
     compute_effect_sizes, compute_residual_failure_breakdown,
+    paired_bootstrap_delta_ci, holm_bonferroni,
 )
 from medics.judge import judge_response_batch, judge_helpfulness_batch
 from medics.utils import load_jsonl, save_jsonl, save_json
@@ -239,10 +240,170 @@ def evaluate_checkpoints(checkpoints, seeds):
             print(f"  {pair}: h={es['cohens_h']:.3f} ({es['interpretation']})")
         all_results["effect_sizes"] = effect_sizes
 
+    # Paired bootstrap on ΔASR (base→SFT, base→DPO, SFT→DPO), aggregated
+    # across all requested seed runs instead of only the first seed.
+    paired = _paired_delta_asr_all_pairs(checkpoints, seeds)
+    if paired:
+        print("\nPaired bootstrap ΔASR (95% CI, base 0 = no change):")
+        for pair, stats in paired.items():
+            lo, hi = stats["ci"]
+            sig = "*" if lo * hi > 0 else "ns"
+            print(
+                f"  {pair}: Δ={stats['delta_mean']:+.1%}  CI=[{lo:+.1%}, {hi:+.1%}]  "
+                f"n={stats['n']}  {sig}"
+            )
+        all_results["paired_bootstrap_delta_asr"] = paired
+
+    # Holm-Bonferroni correction over per-language McNemar tests, aggregated
+    # across all requested seed runs instead of only the first seed.
+    per_lang_mcnemar = _per_language_mcnemar(checkpoints, seeds)
+    if per_lang_mcnemar:
+        for contrast, pvals in per_lang_mcnemar.items():
+            if not pvals:
+                continue
+            adj = holm_bonferroni(
+                {lang: info["p_value"] for lang, info in pvals.items()},
+                alpha=0.05,
+            )
+            print(f"\nPer-language McNemar, Holm-Bonferroni corrected ({contrast}):")
+            for lang, info in sorted(adj["results"].items(),
+                                     key=lambda x: x[1]["rank"]):
+                support = pvals[lang]["n"]
+                marker = "**" if info["reject_null"] else "ns"
+                print(f"  {lang}: p_raw={info['p_raw']:.4f}  "
+                      f"thresh={info['adj_threshold']:.4f}  n={support}  {marker}")
+        all_results["per_language_mcnemar_holm"] = {
+            contrast: {
+                **holm_bonferroni(
+                    {lang: info["p_value"] for lang, info in pvals.items()},
+                    alpha=0.05,
+                ),
+                "support": {
+                    lang: {
+                        "n": info["n"],
+                        "seeds_used": info["seeds_used"],
+                    }
+                    for lang, info in pvals.items()
+                },
+            }
+            for contrast, pvals in per_lang_mcnemar.items() if pvals
+        }
+
     # Save summary
     Path("results/eval").mkdir(parents=True, exist_ok=True)
     save_json(all_results, "results/eval/summary.json")
     print(f"\nResults saved to results/eval/summary.json")
+
+
+def _load_results_across_seeds(ckpt, seeds, filename):
+    """Load unique result files across requested seeds without double-counting fallbacks."""
+    loaded = []
+    seen_paths = set()
+    for seed in seeds:
+        path = _find_results_path(ckpt, seed, filename)
+        if not Path(path).exists() or path in seen_paths:
+            continue
+        seen_paths.add(path)
+        rows = load_jsonl(path)
+        if rows:
+            loaded.append((seed, rows, path))
+    return loaded
+
+
+def _paired_delta_asr_all_pairs(checkpoints, seeds):
+    """Compute paired-bootstrap ΔASR CIs for every ordered checkpoint pair."""
+    pairs = {}
+    order = ["base", "sft", "dpo"]
+    ckpt_order = [c for c in order if c in checkpoints]
+    for i, a in enumerate(ckpt_order):
+        for b in ckpt_order[i + 1:]:
+            a_runs = {
+                seed: rows
+                for seed, rows, _ in _load_results_across_seeds(a, seeds, "held_out.jsonl")
+            }
+            b_runs = {
+                seed: rows
+                for seed, rows, _ in _load_results_across_seeds(b, seeds, "held_out.jsonl")
+            }
+            before_harm = []
+            after_harm = []
+            seeds_used = []
+
+            for seed in seeds:
+                a_rows = a_runs.get(seed)
+                b_rows = b_runs.get(seed)
+                if not (a_rows and b_rows):
+                    continue
+                before_safe, after_safe = _match_results_by_id(a_rows, b_rows)
+                if not before_safe:
+                    continue
+                before_harm.extend(0 if correct else 1 for correct in before_safe)
+                after_harm.extend(0 if correct else 1 for correct in after_safe)
+                seeds_used.append(seed)
+
+            if not before_harm:
+                continue
+            pair_stats = paired_bootstrap_delta_ci(before_harm, after_harm, seed=42)
+            pair_stats["seeds_used"] = seeds_used
+            pairs[f"{a}_to_{b}"] = pair_stats
+    return pairs
+
+
+def _per_language_mcnemar(checkpoints, seeds):
+    """Compute per-language McNemar p-values for base→SFT and base→DPO."""
+    contrasts = {}
+    if "base" not in checkpoints:
+        return contrasts
+
+    base_runs = _load_results_across_seeds("base", seeds, "held_out.jsonl")
+    if not base_runs:
+        return contrasts
+
+    for target in ("sft", "dpo"):
+        if target not in checkpoints:
+            continue
+        target_runs = {
+            seed: rows
+            for seed, rows, _ in _load_results_across_seeds(target, seeds, "held_out.jsonl")
+        }
+        if not target_runs:
+            continue
+
+        per_lang = {}
+        all_langs = sorted({
+            row.get("language")
+            for _, rows, _ in base_runs
+            for row in rows
+            if row.get("language")
+        })
+
+        for lang in all_langs:
+            b_correct = []
+            t_correct = []
+            seeds_used = []
+
+            for seed, base_rows, _ in base_runs:
+                target_rows = target_runs.get(seed)
+                if not target_rows:
+                    continue
+                base_subset = [row for row in base_rows if row.get("language") == lang]
+                tgt_subset = [row for row in target_rows if row.get("language") == lang]
+                seed_b_correct, seed_t_correct = _match_results_by_id(base_subset, tgt_subset)
+                if not seed_b_correct:
+                    continue
+                b_correct.extend(seed_b_correct)
+                t_correct.extend(seed_t_correct)
+                seeds_used.append(seed)
+
+            if len(b_correct) < 10:
+                continue
+            per_lang[lang] = {
+                "p_value": mcnemar_test(b_correct, t_correct),
+                "n": len(b_correct),
+                "seeds_used": seeds_used,
+            }
+        contrasts[f"base_vs_{target}"] = per_lang
+    return contrasts
 
 
 def _find_results_path(ckpt, seed, filename):
@@ -275,6 +436,57 @@ def judge_helpfulness_cmd(args):
         print(f"  Over-refused: {n_refused}/{len(valid)} ({n_refused/len(valid):.1%})")
     else:
         print("  WARNING: All results had judge errors — no valid helpfulness data")
+
+
+def judge_attacks_cmd(args):
+    """Judge harmfulness of held-out attack evaluation results via GPT-5.
+
+    Writes judge_label / judge_method / judge_rationale back to the same file
+    (matches the --judge-helpfulness in-place pattern), so downstream metric
+    evaluation (compute_asr, McNemar, Cohen's h) picks them up without any
+    path changes.
+    """
+    results = load_jsonl(args.input)
+    if not results:
+        print(f"ERROR: No results at {args.input}")
+        return
+
+    # Skip rows that already have a valid attack judgment — lets the cell be
+    # re-run safely after a partial failure without paying API cost twice.
+    needs_judging = [
+        r for r in results
+        if r.get("judge_label") not in ("harmful", "safe")
+    ]
+    already_judged = len(results) - len(needs_judging)
+    if already_judged:
+        print(f"  {already_judged}/{len(results)} already judged — skipping those")
+
+    if not needs_judging:
+        print("  Nothing to judge.")
+        return
+
+    print(f"Judging harmfulness for {len(needs_judging)} attack responses...")
+    judged_subset = judge_response_batch(needs_judging)
+
+    # Merge judged subset back by id (fall back to attack_prompt if no id).
+    def _row_key(row):
+        return (
+            row.get("seed_id", ""),
+            row.get("strategy", ""),
+            row.get("language", ""),
+            row.get("attack_prompt", ""),
+        )
+    judged_by_key = {_row_key(r): r for r in judged_subset}
+    merged = [judged_by_key.get(_row_key(r), r) for r in results]
+
+    output = args.output or args.input
+    save_jsonl(merged, output)
+    print(f"Judged attack results saved: {output}")
+
+    from medics.metrics import compute_asr, compute_judge_error_rate
+    asr = compute_asr(merged)
+    err = compute_judge_error_rate(merged)
+    print(f"  ASR: {asr:.1%}  |  Judge error rate: {err:.1%}")
 
 
 def judge_transfer_cmd(args):
@@ -438,6 +650,9 @@ def main():
     # Helpfulness judging mode
     parser.add_argument("--judge-helpfulness", action="store_true",
                         help="Run GPT-5 helpfulness judging on benign results")
+    # Attack judging mode (held-out harmfulness)
+    parser.add_argument("--judge-attacks", action="store_true",
+                        help="Run GPT-5 harmfulness judging on held-out attack results")
     # Transfer judging mode
     parser.add_argument("--judge-transfer", action="store_true",
                         help="Run GPT-5 safety judging on transfer results")
@@ -458,6 +673,11 @@ def main():
             print("ERROR: --input required for --judge-helpfulness")
             return
         judge_helpfulness_cmd(args)
+    elif args.judge_attacks:
+        if not args.input:
+            print("ERROR: --input required for --judge-attacks")
+            return
+        judge_attacks_cmd(args)
     elif args.judge_transfer:
         if not args.input:
             print("ERROR: --input required for --judge-transfer")
