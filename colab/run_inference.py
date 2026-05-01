@@ -54,8 +54,62 @@ def _select_system_prompt(checkpoint):
     return BASE_SYSTEM_PROMPT
 
 
-def load_model(model_id, checkpoint, cfg):
-    """Load model with optional adapter."""
+def _resolve_sft_base_for_dpo(dpo_checkpoint: str) -> str | None:
+    """Find the SFT checkpoint that DPO was trained on top of.
+
+    train_dpo.py merges an SFT adapter into the base weights before attaching
+    the DPO LoRA, so the DPO adapter is only valid on top of SFT-merged
+    weights. At inference we must reproduce that stack.
+
+    Search order:
+      1. DPO adapter dir: adapter_config.json 'base_model_name_or_path'
+         (may point directly at the SFT adapter path)
+      2. Sidecar file `sft_base.txt` in the DPO checkpoint directory
+      3. Convention: checkpoints/sft/round_3/final -> round_2/final -> round_1/final
+    """
+    ckpt_path = Path(dpo_checkpoint)
+    adapter_cfg = ckpt_path / "adapter_config.json"
+    if adapter_cfg.exists():
+        try:
+            import json
+            cfg_obj = json.loads(adapter_cfg.read_text())
+            base_ref = cfg_obj.get("base_model_name_or_path", "")
+            # Only treat as SFT if the path points at a local adapter dir
+            if base_ref and Path(base_ref).exists() and (Path(base_ref) / "adapter_config.json").exists():
+                return base_ref
+        except Exception:
+            pass
+
+    sidecar = ckpt_path / "sft_base.txt"
+    if sidecar.exists():
+        hint = sidecar.read_text().strip()
+        if hint and Path(hint).exists():
+            return hint
+
+    for candidate in (
+        "checkpoints/sft/round_3/final",
+        "checkpoints/sft/round_2/final",
+        "checkpoints/sft/round_1/final",
+    ):
+        if Path(candidate).exists() and (Path(candidate) / "adapter_config.json").exists():
+            return candidate
+    return None
+
+
+def _looks_like_dpo_checkpoint(checkpoint: str) -> bool:
+    """DPO LoRAs live under checkpoints/dpo/ by convention in this project."""
+    path = Path(checkpoint)
+    return any(part == "dpo" for part in path.parts)
+
+
+def load_model(model_id, checkpoint, cfg, sft_base: str | None = None):
+    """Load model with optional adapter.
+
+    For a DPO checkpoint, stacks base + SFT (merged) + DPO. DPO training bakes
+    SFT into the base weights before attaching the DPO LoRA, so inference must
+    mirror that or the DPO adapter behaves as a small random perturbation on
+    the unmerged base (measured ASR regression: ~27% vs SFT's ~6%).
+    """
     compute_dtype, dtype_label = _resolve_compute_dtype(cfg)
     print(f"4-bit compute dtype: {dtype_label}")
     bnb_config = BitsAndBytesConfig(
@@ -70,6 +124,21 @@ def load_model(model_id, checkpoint, cfg):
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
     if checkpoint != "base":
+        # For DPO: locate the SFT checkpoint it was trained on top of, merge
+        # SFT first, then attach the DPO LoRA.
+        if _looks_like_dpo_checkpoint(checkpoint):
+            resolved_sft = sft_base or _resolve_sft_base_for_dpo(checkpoint)
+            if resolved_sft is None:
+                raise FileNotFoundError(
+                    "DPO inference requires the SFT checkpoint that DPO was trained on "
+                    f"top of, but none could be resolved for '{checkpoint}'. Pass "
+                    "--sft-base explicitly or place the SFT adapter at "
+                    "checkpoints/sft/round_3/final."
+                )
+            print(f"Loading SFT adapter (DPO base): {resolved_sft}")
+            model = PeftModel.from_pretrained(model, resolved_sft)
+            model = model.merge_and_unload()
+
         print(f"Loading adapter: {checkpoint}")
         ckpt_path = Path(checkpoint)
         if ckpt_path.exists():
@@ -312,6 +381,11 @@ def main():
     parser = argparse.ArgumentParser(description="Llama-3 inference")
     parser.add_argument("--checkpoint", required=True,
                         help="'base' or adapter path")
+    parser.add_argument("--sft-base", default=None,
+                        help="Explicit SFT adapter path to merge before a DPO "
+                             "adapter. Only used when --checkpoint points at a "
+                             "DPO LoRA. Auto-resolved from adapter_config, "
+                             "sft_base.txt sidecar, or checkpoints/sft/round_*/final.")
     parser.add_argument("--input", required=True,
                         help="Input JSONL file with prompts")
     parser.add_argument("--output", required=True,
@@ -369,11 +443,30 @@ def main():
 
     prompts = load_jsonl(args.input)
 
-    # Resume support: check for partial results
+    # Resume support: prefer a complete final file over an in-progress partial.
+    # Without this check, a completed output would be silently re-generated on
+    # re-run, overwriting hours of prior work.
     partial = []
     resume_from = 0
+    output_path = Path(args.output)
     partial_path = args.output + ".partial"
-    if Path(partial_path).exists():
+
+    if output_path.exists():
+        existing = load_jsonl(str(output_path))
+        if len(existing) == len(prompts):
+            print(f"Output already complete: {args.output} ({len(existing)}/{len(prompts)} rows). "
+                  "Skipping. Delete the file to force a re-run.")
+            return
+        if len(existing) > len(prompts):
+            print(f"WARNING: existing output has more rows ({len(existing)}) than input "
+                  f"({len(prompts)}); ignoring and regenerating.")
+        else:
+            print(f"Found incomplete output ({len(existing)}/{len(prompts)}); "
+                  "treating as a partial and resuming.")
+            partial = existing
+            resume_from = len(existing)
+
+    if resume_from == 0 and Path(partial_path).exists():
         partial = load_jsonl(partial_path)
         resume_from = len(partial)
         if resume_from > len(prompts):
@@ -382,7 +475,7 @@ def main():
             resume_from = 0
         elif resume_from == len(prompts):
             print(f"Partial already complete ({resume_from}/{len(prompts)}). Finalizing output.")
-            Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             save_jsonl(partial, args.output)
             partial_file = Path(partial_path)
             if partial_file.exists():
@@ -391,10 +484,12 @@ def main():
             return
         else:
             print(f"Resuming from {resume_from}/{len(prompts)} (partial file found)")
-    else:
+
+    if resume_from == 0:
         print(f"Loaded {len(prompts)} prompts")
 
-    model, tokenizer = load_model(model_id, args.checkpoint, cfg)
+    model, tokenizer = load_model(model_id, args.checkpoint, cfg,
+                                  sft_base=args.sft_base)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     results = run_inference(model, tokenizer, prompts, gen_cfg, system_prompt,
                             system_prompt_mode=prompt_mode,
