@@ -1,0 +1,7 @@
+{
+  "auroc": 0.5537,
+  "best_f1": 0.6341,
+  "verdict": "LOW — CS attacks are indistinguishable from normal multilingual input",
+  "implication": "CS attacks cannot be trivially detected, making detection-based defense impractical. Weight-level defense is necessary.",
+  "per_language": {}
+}

@@ -1,0 +1,529 @@
+{
+  "total_wall_clock_hours": 66.31,
+  "total_gpu_hours": 51.89,
+  "training_hours": 5.36,
+  "inference_hours": 46.53,
+  "n_phases": 104,
+  "per_phase": [
+    {
+      "phase": "Attack Round",
+      "duration_hours": 0.032,
+      "gpu": false
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.625,
+      "gpu": true
+    },
+    {
+      "phase": "Attack Round",
+      "duration_hours": 0.103,
+      "gpu": false
+    },
+    {
+      "phase": "Defense Data Construction",
+      "duration_hours": 1.146,
+      "gpu": false
+    },
+    {
+      "phase": "SFT Training",
+      "duration_hours": 1.031,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.756,
+      "gpu": true
+    },
+    {
+      "phase": "Attack Round",
+      "duration_hours": 0.063,
+      "gpu": false
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 2.836,
+      "gpu": true
+    },
+    {
+      "phase": "Attack Round",
+      "duration_hours": 0.101,
+      "gpu": false
+    },
+    {
+      "phase": "Defense Data Construction",
+      "duration_hours": 1.285,
+      "gpu": false
+    },
+    {
+      "phase": "SFT Training",
+      "duration_hours": 1.368,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.752,
+      "gpu": true
+    },
+    {
+      "phase": "Attack Round",
+      "duration_hours": 0.265,
+      "gpu": false
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 1.98,
+      "gpu": true
+    },
+    {
+      "phase": "Attack Round",
+      "duration_hours": 0.066,
+      "gpu": false
+    },
+    {
+      "phase": "Defense Data Construction",
+      "duration_hours": 1.122,
+      "gpu": false
+    },
+    {
+      "phase": "SFT Training",
+      "duration_hours": 1.417,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.748,
+      "gpu": true
+    },
+    {
+      "phase": "SFT Training",
+      "duration_hours": 1.421,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.759,
+      "gpu": true
+    },
+    {
+      "phase": "DPO Training",
+      "duration_hours": 0.124,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.742,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.672,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.742,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.672,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.741,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.674,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.821,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.761,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.825,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.762,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.825,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.773,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.779,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.71,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.773,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.709,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.781,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.71,
+      "gpu": true
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.269,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.336,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.296,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.277,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.346,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.248,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.197,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.236,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.199,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.192,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.426,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.435,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.407,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.319,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.331,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.245,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.182,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.169,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.159,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.159,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.166,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.178,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.163,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.176,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.169,
+      "gpu": false
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 1.887,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 1.855,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 1.856,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 1.864,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 1.851,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 1.85,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.662,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.656,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.644,
+      "gpu": true
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.136,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.133,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.13,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.141,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.164,
+      "gpu": false
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.162,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.002,
+      "gpu": false
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.543,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.529,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.529,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.853,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.833,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.823,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.744,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.729,
+      "gpu": true
+    },
+    {
+      "phase": "Inference",
+      "duration_hours": 0.733,
+      "gpu": true
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.434,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.273,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.304,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.298,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.294,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.276,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.273,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.334,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.284,
+      "gpu": false
+    },
+    {
+      "phase": "Fairness Analysis",
+      "duration_hours": 0.002,
+      "gpu": false
+    },
+    {
+      "phase": "Transfer Inference",
+      "duration_hours": 2.686,
+      "gpu": true
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.132,
+      "gpu": false
+    },
+    {
+      "phase": "Perplexity Detection",
+      "duration_hours": 0.025,
+      "gpu": true
+    },
+    {
+      "phase": "Transfer Inference",
+      "duration_hours": 2.449,
+      "gpu": true
+    },
+    {
+      "phase": "Evaluation",
+      "duration_hours": 0.183,
+      "gpu": false
+    }
+  ]
+}

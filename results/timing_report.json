@@ -1,394 +1,730 @@
 [
-  {
-    "phase": "Attack Round",
-    "duration_sec": 114.12,
-    "duration_min": 1.9,
-    "gpu": false,
-    "timestamp": "2026-04-08 06:32:27"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2251.13,
-    "duration_min": 37.52,
-    "gpu": true,
-    "timestamp": "2026-04-08 07:10:07"
-  },
-  {
-    "phase": "Attack Round",
-    "duration_sec": 370.37,
-    "duration_min": 6.17,
-    "gpu": false,
-    "timestamp": "2026-04-08 07:16:21"
-  },
-  {
-    "phase": "Defense Data Construction",
-    "duration_sec": 4126.49,
-    "duration_min": 68.77,
-    "gpu": false,
-    "timestamp": "2026-04-16 03:53:02"
-  },
-  {
-    "phase": "SFT Training",
-    "duration_sec": 3712.06,
-    "duration_min": 61.87,
-    "gpu": true,
-    "timestamp": "2026-04-16 04:55:06"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2720.94,
-    "duration_min": 45.35,
-    "gpu": true,
-    "timestamp": "2026-04-16 05:40:41"
-  },
-  {
-    "phase": "Attack Round",
-    "duration_sec": 225.71,
-    "duration_min": 3.76,
-    "gpu": false,
-    "timestamp": "2026-04-16 05:44:32"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 10209.98,
-    "duration_min": 170.17,
-    "gpu": true,
-    "timestamp": "2026-04-16 08:34:51"
-  },
-  {
-    "phase": "Attack Round",
-    "duration_sec": 361.94,
-    "duration_min": 6.03,
-    "gpu": false,
-    "timestamp": "2026-04-16 08:40:57"
-  },
-  {
-    "phase": "Defense Data Construction",
-    "duration_sec": 4627.19,
-    "duration_min": 77.12,
-    "gpu": false,
-    "timestamp": "2026-04-18 08:40:01"
-  },
-  {
-    "phase": "SFT Training",
-    "duration_sec": 4924.65,
-    "duration_min": 82.08,
-    "gpu": true,
-    "timestamp": "2026-04-18 10:02:28"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2705.63,
-    "duration_min": 45.09,
-    "gpu": true,
-    "timestamp": "2026-04-18 10:47:48"
-  },
-  {
-    "phase": "Attack Round",
-    "duration_sec": 952.98,
-    "duration_min": 15.88,
-    "gpu": false,
-    "timestamp": "2026-04-18 11:03:47"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 7128.32,
-    "duration_min": 118.81,
-    "gpu": true,
-    "timestamp": "2026-04-19 16:04:16"
-  },
-  {
-    "phase": "Attack Round",
-    "duration_sec": 237.5,
-    "duration_min": 3.96,
-    "gpu": false,
-    "timestamp": "2026-04-19 16:08:22"
-  },
-  {
-    "phase": "Defense Data Construction",
-    "duration_sec": 4039.21,
-    "duration_min": 67.32,
-    "gpu": false,
-    "timestamp": "2026-04-19 17:15:44"
-  },
-  {
-    "phase": "SFT Training",
-    "duration_sec": 5099.52,
-    "duration_min": 84.99,
-    "gpu": true,
-    "timestamp": "2026-04-19 18:40:57"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2694.48,
-    "duration_min": 44.91,
-    "gpu": true,
-    "timestamp": "2026-04-19 19:26:02"
-  },
-  {
-    "phase": "SFT Training",
-    "duration_sec": 5117.4,
-    "duration_min": 85.29,
-    "gpu": true,
-    "timestamp": "2026-04-19 21:05:41"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2730.62,
-    "duration_min": 45.51,
-    "gpu": true,
-    "timestamp": "2026-04-19 21:51:29"
-  },
-  {
-    "phase": "DPO Training",
-    "duration_sec": 445.23,
-    "duration_min": 7.42,
-    "gpu": true,
-    "timestamp": "2026-04-19 21:59:09"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2670.12,
-    "duration_min": 44.5,
-    "gpu": true,
-    "timestamp": "2026-04-19 22:43:59"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2418.78,
-    "duration_min": 40.31,
-    "gpu": true,
-    "timestamp": "2026-04-19 23:24:28"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2669.54,
-    "duration_min": 44.49,
-    "gpu": true,
-    "timestamp": "2026-04-20 00:09:07"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2417.84,
-    "duration_min": 40.3,
-    "gpu": true,
-    "timestamp": "2026-04-20 00:49:35"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2669.29,
-    "duration_min": 44.49,
-    "gpu": true,
-    "timestamp": "2026-04-20 01:34:14"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2425.41,
-    "duration_min": 40.42,
-    "gpu": true,
-    "timestamp": "2026-04-20 02:14:49"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2954.05,
-    "duration_min": 49.23,
-    "gpu": true,
-    "timestamp": "2026-04-20 03:04:13"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2739.58,
-    "duration_min": 45.66,
-    "gpu": true,
-    "timestamp": "2026-04-20 03:50:03"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2968.76,
-    "duration_min": 49.48,
-    "gpu": true,
-    "timestamp": "2026-04-20 04:39:42"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2743.86,
-    "duration_min": 45.73,
-    "gpu": true,
-    "timestamp": "2026-04-20 05:25:36"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2970.53,
-    "duration_min": 49.51,
-    "gpu": true,
-    "timestamp": "2026-04-20 06:15:16"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2783.81,
-    "duration_min": 46.4,
-    "gpu": true,
-    "timestamp": "2026-04-20 07:01:50"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2804.77,
-    "duration_min": 46.75,
-    "gpu": true,
-    "timestamp": "2026-04-20 07:48:45"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2556.23,
-    "duration_min": 42.6,
-    "gpu": true,
-    "timestamp": "2026-04-20 08:31:31"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2782.28,
-    "duration_min": 46.37,
-    "gpu": true,
-    "timestamp": "2026-04-20 09:18:03"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2553.67,
-    "duration_min": 42.56,
-    "gpu": true,
-    "timestamp": "2026-04-20 10:00:47"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2811.41,
-    "duration_min": 46.86,
-    "gpu": true,
-    "timestamp": "2026-04-20 10:47:48"
-  },
-  {
-    "phase": "Inference",
-    "duration_sec": 2556.6,
-    "duration_min": 42.61,
-    "gpu": true,
-    "timestamp": "2026-04-20 11:30:34"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 969.35,
-    "duration_min": 16.16,
-    "gpu": false,
-    "timestamp": "2026-04-20 11:46:48"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1209.06,
-    "duration_min": 20.15,
-    "gpu": false,
-    "timestamp": "2026-04-20 12:07:00"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1064.17,
-    "duration_min": 17.74,
-    "gpu": false,
-    "timestamp": "2026-04-22 16:00:28"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 998.17,
-    "duration_min": 16.64,
-    "gpu": false,
-    "timestamp": "2026-04-22 16:17:08"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1244.99,
-    "duration_min": 20.75,
-    "gpu": false,
-    "timestamp": "2026-04-22 16:37:54"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 893.37,
-    "duration_min": 14.89,
-    "gpu": false,
-    "timestamp": "2026-04-22 17:03:17"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 710.11,
-    "duration_min": 11.84,
-    "gpu": false,
-    "timestamp": "2026-04-22 17:15:08"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 849.4,
-    "duration_min": 14.16,
-    "gpu": false,
-    "timestamp": "2026-04-22 17:29:19"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 717.71,
-    "duration_min": 11.96,
-    "gpu": false,
-    "timestamp": "2026-04-22 17:41:18"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 691.5,
-    "duration_min": 11.53,
-    "gpu": false,
-    "timestamp": "2026-04-22 17:52:51"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1533.68,
-    "duration_min": 25.56,
-    "gpu": false,
-    "timestamp": "2026-04-23 15:25:22"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1567.62,
-    "duration_min": 26.13,
-    "gpu": false,
-    "timestamp": "2026-04-23 15:51:31"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1464.5,
-    "duration_min": 24.41,
-    "gpu": false,
-    "timestamp": "2026-04-23 16:15:57"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1149.08,
-    "duration_min": 19.15,
-    "gpu": false,
-    "timestamp": "2026-04-23 16:35:08"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1192.36,
-    "duration_min": 19.87,
-    "gpu": false,
-    "timestamp": "2026-04-23 16:55:01"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 881.56,
-    "duration_min": 14.69,
-    "gpu": false,
-    "timestamp": "2026-04-23 18:00:25"
-  },
-  {
-    "phase": "Evaluation",
-    "duration_sec": 1.06,
-    "duration_min": 0.02,
-    "gpu": false,
-    "timestamp": "2026-04-23 18:00:28"
-  }
+    {
+        "phase": "Attack Round",
+        "duration_sec": 114.12,
+        "duration_min": 1.9,
+        "gpu": false,
+        "timestamp": "2026-04-08 06:32:27"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2251.13,
+        "duration_min": 37.52,
+        "gpu": true,
+        "timestamp": "2026-04-08 07:10:07"
+    },
+    {
+        "phase": "Attack Round",
+        "duration_sec": 370.37,
+        "duration_min": 6.17,
+        "gpu": false,
+        "timestamp": "2026-04-08 07:16:21"
+    },
+    {
+        "phase": "Defense Data Construction",
+        "duration_sec": 4126.49,
+        "duration_min": 68.77,
+        "gpu": false,
+        "timestamp": "2026-04-16 03:53:02"
+    },
+    {
+        "phase": "SFT Training",
+        "duration_sec": 3712.06,
+        "duration_min": 61.87,
+        "gpu": true,
+        "timestamp": "2026-04-16 04:55:06"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2720.94,
+        "duration_min": 45.35,
+        "gpu": true,
+        "timestamp": "2026-04-16 05:40:41"
+    },
+    {
+        "phase": "Attack Round",
+        "duration_sec": 225.71,
+        "duration_min": 3.76,
+        "gpu": false,
+        "timestamp": "2026-04-16 05:44:32"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 10209.98,
+        "duration_min": 170.17,
+        "gpu": true,
+        "timestamp": "2026-04-16 08:34:51"
+    },
+    {
+        "phase": "Attack Round",
+        "duration_sec": 361.94,
+        "duration_min": 6.03,
+        "gpu": false,
+        "timestamp": "2026-04-16 08:40:57"
+    },
+    {
+        "phase": "Defense Data Construction",
+        "duration_sec": 4627.19,
+        "duration_min": 77.12,
+        "gpu": false,
+        "timestamp": "2026-04-18 08:40:01"
+    },
+    {
+        "phase": "SFT Training",
+        "duration_sec": 4924.65,
+        "duration_min": 82.08,
+        "gpu": true,
+        "timestamp": "2026-04-18 10:02:28"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2705.63,
+        "duration_min": 45.09,
+        "gpu": true,
+        "timestamp": "2026-04-18 10:47:48"
+    },
+    {
+        "phase": "Attack Round",
+        "duration_sec": 952.98,
+        "duration_min": 15.88,
+        "gpu": false,
+        "timestamp": "2026-04-18 11:03:47"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 7128.32,
+        "duration_min": 118.81,
+        "gpu": true,
+        "timestamp": "2026-04-19 16:04:16"
+    },
+    {
+        "phase": "Attack Round",
+        "duration_sec": 237.5,
+        "duration_min": 3.96,
+        "gpu": false,
+        "timestamp": "2026-04-19 16:08:22"
+    },
+    {
+        "phase": "Defense Data Construction",
+        "duration_sec": 4039.21,
+        "duration_min": 67.32,
+        "gpu": false,
+        "timestamp": "2026-04-19 17:15:44"
+    },
+    {
+        "phase": "SFT Training",
+        "duration_sec": 5099.52,
+        "duration_min": 84.99,
+        "gpu": true,
+        "timestamp": "2026-04-19 18:40:57"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2694.48,
+        "duration_min": 44.91,
+        "gpu": true,
+        "timestamp": "2026-04-19 19:26:02"
+    },
+    {
+        "phase": "SFT Training",
+        "duration_sec": 5117.4,
+        "duration_min": 85.29,
+        "gpu": true,
+        "timestamp": "2026-04-19 21:05:41"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2730.62,
+        "duration_min": 45.51,
+        "gpu": true,
+        "timestamp": "2026-04-19 21:51:29"
+    },
+    {
+        "phase": "DPO Training",
+        "duration_sec": 445.23,
+        "duration_min": 7.42,
+        "gpu": true,
+        "timestamp": "2026-04-19 21:59:09"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2670.12,
+        "duration_min": 44.5,
+        "gpu": true,
+        "timestamp": "2026-04-19 22:43:59"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2418.78,
+        "duration_min": 40.31,
+        "gpu": true,
+        "timestamp": "2026-04-19 23:24:28"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2669.54,
+        "duration_min": 44.49,
+        "gpu": true,
+        "timestamp": "2026-04-20 00:09:07"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2417.84,
+        "duration_min": 40.3,
+        "gpu": true,
+        "timestamp": "2026-04-20 00:49:35"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2669.29,
+        "duration_min": 44.49,
+        "gpu": true,
+        "timestamp": "2026-04-20 01:34:14"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2425.41,
+        "duration_min": 40.42,
+        "gpu": true,
+        "timestamp": "2026-04-20 02:14:49"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2954.05,
+        "duration_min": 49.23,
+        "gpu": true,
+        "timestamp": "2026-04-20 03:04:13"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2739.58,
+        "duration_min": 45.66,
+        "gpu": true,
+        "timestamp": "2026-04-20 03:50:03"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2968.76,
+        "duration_min": 49.48,
+        "gpu": true,
+        "timestamp": "2026-04-20 04:39:42"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2743.86,
+        "duration_min": 45.73,
+        "gpu": true,
+        "timestamp": "2026-04-20 05:25:36"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2970.53,
+        "duration_min": 49.51,
+        "gpu": true,
+        "timestamp": "2026-04-20 06:15:16"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2783.81,
+        "duration_min": 46.4,
+        "gpu": true,
+        "timestamp": "2026-04-20 07:01:50"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2804.77,
+        "duration_min": 46.75,
+        "gpu": true,
+        "timestamp": "2026-04-20 07:48:45"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2556.23,
+        "duration_min": 42.6,
+        "gpu": true,
+        "timestamp": "2026-04-20 08:31:31"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2782.28,
+        "duration_min": 46.37,
+        "gpu": true,
+        "timestamp": "2026-04-20 09:18:03"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2553.67,
+        "duration_min": 42.56,
+        "gpu": true,
+        "timestamp": "2026-04-20 10:00:47"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2811.41,
+        "duration_min": 46.86,
+        "gpu": true,
+        "timestamp": "2026-04-20 10:47:48"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2556.6,
+        "duration_min": 42.61,
+        "gpu": true,
+        "timestamp": "2026-04-20 11:30:34"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 969.35,
+        "duration_min": 16.16,
+        "gpu": false,
+        "timestamp": "2026-04-20 11:46:48"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1209.06,
+        "duration_min": 20.15,
+        "gpu": false,
+        "timestamp": "2026-04-20 12:07:00"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1064.17,
+        "duration_min": 17.74,
+        "gpu": false,
+        "timestamp": "2026-04-22 16:00:28"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 998.17,
+        "duration_min": 16.64,
+        "gpu": false,
+        "timestamp": "2026-04-22 16:17:08"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1244.99,
+        "duration_min": 20.75,
+        "gpu": false,
+        "timestamp": "2026-04-22 16:37:54"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 893.37,
+        "duration_min": 14.89,
+        "gpu": false,
+        "timestamp": "2026-04-22 17:03:17"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 710.11,
+        "duration_min": 11.84,
+        "gpu": false,
+        "timestamp": "2026-04-22 17:15:08"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 849.4,
+        "duration_min": 14.16,
+        "gpu": false,
+        "timestamp": "2026-04-22 17:29:19"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 717.71,
+        "duration_min": 11.96,
+        "gpu": false,
+        "timestamp": "2026-04-22 17:41:18"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 691.5,
+        "duration_min": 11.53,
+        "gpu": false,
+        "timestamp": "2026-04-22 17:52:51"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1533.68,
+        "duration_min": 25.56,
+        "gpu": false,
+        "timestamp": "2026-04-23 15:25:22"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1567.62,
+        "duration_min": 26.13,
+        "gpu": false,
+        "timestamp": "2026-04-23 15:51:31"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1464.5,
+        "duration_min": 24.41,
+        "gpu": false,
+        "timestamp": "2026-04-23 16:15:57"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1149.08,
+        "duration_min": 19.15,
+        "gpu": false,
+        "timestamp": "2026-04-23 16:35:08"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 1192.36,
+        "duration_min": 19.87,
+        "gpu": false,
+        "timestamp": "2026-04-23 16:55:01"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 881.56,
+        "duration_min": 14.69,
+        "gpu": false,
+        "timestamp": "2026-04-23 18:00:25"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 656.47,
+        "duration_min": 10.94,
+        "gpu": false,
+        "timestamp": "2026-04-24 00:37:06"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 608.63,
+        "duration_min": 10.14,
+        "gpu": false,
+        "timestamp": "2026-04-24 00:47:16"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 572.53,
+        "duration_min": 9.54,
+        "gpu": false,
+        "timestamp": "2026-04-24 00:56:50"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 572.76,
+        "duration_min": 9.55,
+        "gpu": false,
+        "timestamp": "2026-04-24 01:06:24"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 596.44,
+        "duration_min": 9.94,
+        "gpu": false,
+        "timestamp": "2026-04-24 01:16:22"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 641.15,
+        "duration_min": 10.69,
+        "gpu": false,
+        "timestamp": "2026-04-24 01:27:04"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 585.52,
+        "duration_min": 9.76,
+        "gpu": false,
+        "timestamp": "2026-04-24 01:36:51"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 632.0,
+        "duration_min": 10.53,
+        "gpu": false,
+        "timestamp": "2026-04-24 01:47:24"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 607.45,
+        "duration_min": 10.12,
+        "gpu": false,
+        "timestamp": "2026-04-24 01:57:33"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 6794.17,
+        "duration_min": 113.24,
+        "gpu": true,
+        "timestamp": "2026-04-24 10:06:15"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 6678.77,
+        "duration_min": 111.31,
+        "gpu": true,
+        "timestamp": "2026-04-24 11:57:48"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 6681.16,
+        "duration_min": 111.35,
+        "gpu": true,
+        "timestamp": "2026-04-24 13:49:19"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 6708.84,
+        "duration_min": 111.81,
+        "gpu": true,
+        "timestamp": "2026-04-24 17:36:20"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 6663.94,
+        "duration_min": 111.07,
+        "gpu": true,
+        "timestamp": "2026-04-24 19:27:34"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 6661.63,
+        "duration_min": 111.03,
+        "gpu": true,
+        "timestamp": "2026-04-24 21:18:45"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2382.73,
+        "duration_min": 39.71,
+        "gpu": true,
+        "timestamp": "2026-04-24 22:08:12"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2362.33,
+        "duration_min": 39.37,
+        "gpu": true,
+        "timestamp": "2026-04-24 22:47:44"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2319.0,
+        "duration_min": 38.65,
+        "gpu": true,
+        "timestamp": "2026-04-24 23:26:33"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 488.18,
+        "duration_min": 8.14,
+        "gpu": false,
+        "timestamp": "2026-04-24 18:41:39"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 477.86,
+        "duration_min": 7.96,
+        "gpu": false,
+        "timestamp": "2026-04-24 18:49:38"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 468.31,
+        "duration_min": 7.81,
+        "gpu": false,
+        "timestamp": "2026-04-24 18:57:28"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 507.57,
+        "duration_min": 8.46,
+        "gpu": false,
+        "timestamp": "2026-04-24 19:05:57"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 590.17,
+        "duration_min": 9.84,
+        "gpu": false,
+        "timestamp": "2026-04-24 19:15:48"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 584.52,
+        "duration_min": 9.74,
+        "gpu": false,
+        "timestamp": "2026-04-24 19:25:34"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 5.94,
+        "duration_min": 0.1,
+        "gpu": false,
+        "timestamp": "2026-04-25 05:35:51"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 1954.23,
+        "duration_min": 32.57,
+        "gpu": true,
+        "timestamp": "2026-04-25 06:08:49"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 1902.89,
+        "duration_min": 31.71,
+        "gpu": true,
+        "timestamp": "2026-04-25 06:40:45"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 1906.08,
+        "duration_min": 31.77,
+        "gpu": true,
+        "timestamp": "2026-04-25 07:12:41"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 3070.98,
+        "duration_min": 51.18,
+        "gpu": true,
+        "timestamp": "2026-04-25 08:04:02"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2997.63,
+        "duration_min": 49.96,
+        "gpu": true,
+        "timestamp": "2026-04-25 08:54:09"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2964.31,
+        "duration_min": 49.41,
+        "gpu": true,
+        "timestamp": "2026-04-25 09:43:43"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2679.3,
+        "duration_min": 44.65,
+        "gpu": true,
+        "timestamp": "2026-04-25 10:28:32"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2625.95,
+        "duration_min": 43.77,
+        "gpu": true,
+        "timestamp": "2026-04-25 11:12:28"
+    },
+    {
+        "phase": "Inference",
+        "duration_sec": 2637.16,
+        "duration_min": 43.95,
+        "gpu": true,
+        "timestamp": "2026-04-25 11:56:35"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 1560.85,
+        "duration_min": 26.01,
+        "gpu": false,
+        "timestamp": "2026-04-25 11:09:50"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 984.51,
+        "duration_min": 16.41,
+        "gpu": false,
+        "timestamp": "2026-04-25 11:26:16"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 1093.14,
+        "duration_min": 18.22,
+        "gpu": false,
+        "timestamp": "2026-04-25 11:44:30"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 1072.14,
+        "duration_min": 17.87,
+        "gpu": false,
+        "timestamp": "2026-04-25 12:02:23"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 1058.04,
+        "duration_min": 17.63,
+        "gpu": false,
+        "timestamp": "2026-04-25 12:20:02"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 992.61,
+        "duration_min": 16.54,
+        "gpu": false,
+        "timestamp": "2026-04-25 12:36:35"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 982.39,
+        "duration_min": 16.37,
+        "gpu": false,
+        "timestamp": "2026-04-25 12:52:59"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 1202.08,
+        "duration_min": 20.03,
+        "gpu": false,
+        "timestamp": "2026-04-25 13:13:02"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 1023.51,
+        "duration_min": 17.06,
+        "gpu": false,
+        "timestamp": "2026-04-25 13:30:06"
+    },
+    {
+        "phase": "Fairness Analysis",
+        "duration_sec": 6.49,
+        "duration_min": 0.11,
+        "gpu": false,
+        "timestamp": "2026-04-25 13:30:13"
+    },
+    {
+        "phase": "Transfer Inference",
+        "duration_sec": 9670.6,
+        "duration_min": 161.18,
+        "gpu": true,
+        "timestamp": "2026-04-26 03:02:57"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 476.91,
+        "duration_min": 7.95,
+        "gpu": false,
+        "timestamp": "2026-04-26 03:11:01"
+    },
+    {
+        "phase": "Perplexity Detection",
+        "duration_sec": 88.21,
+        "duration_min": 1.47,
+        "gpu": true,
+        "timestamp": "2026-04-26 05:30:39"
+    },
+    {
+        "phase": "Transfer Inference",
+        "duration_sec": 8817.64,
+        "duration_min": 146.96,
+        "gpu": true,
+        "timestamp": "2026-04-26 05:38:07"
+    },
+    {
+        "phase": "Evaluation",
+        "duration_sec": 659.53,
+        "duration_min": 10.99,
+        "gpu": false,
+        "timestamp": "2026-04-26 05:49:10"
+    }
 ]

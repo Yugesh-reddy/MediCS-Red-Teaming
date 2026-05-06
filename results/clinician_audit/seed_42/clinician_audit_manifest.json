@@ -1,0 +1,46 @@
+{
+  "seed": 42,
+  "n_prompt_groups": 100,
+  "n_review_items": 200,
+  "priority_cells": [
+    [
+      "TOX",
+      "tl"
+    ],
+    [
+      "ULP",
+      "hi"
+    ],
+    [
+      "TOX",
+      "sw"
+    ]
+  ],
+  "sample_bucket_counts": {
+    "priority": 84,
+    "background": 116
+  },
+  "category_counts": {
+    "TOX": 70,
+    "ULP": 52,
+    "PPV": 20,
+    "MIS": 20,
+    "UCA": 20,
+    "SH": 18
+  },
+  "language_counts": {
+    "sw": 48,
+    "tl": 46,
+    "hi": 46,
+    "yo": 32,
+    "bn": 16,
+    "gu": 12
+  },
+  "checkpoint_counts": {
+    "sft": 100,
+    "base": 100
+  },
+  "packet_path": "results/clinician_audit/seed_42/clinician_audit_packet.csv",
+  "key_path": "results/clinician_audit/seed_42/clinician_audit_key.csv",
+  "instructions_path": "results/clinician_audit/seed_42/clinician_audit_instructions.md"
+}

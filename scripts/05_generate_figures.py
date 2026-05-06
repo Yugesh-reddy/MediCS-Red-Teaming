@@ -12,7 +12,7 @@ Figures:
   4. Thompson Sampling Convergence
   5. Failure Mode Distribution (enhanced with residual breakdown)
   6. Robustness Gain Summary
-  7. DPO Over-Refusal Correction
+  7. DPO Safety Regression (negative result)
   8. Semantic Preservation vs ASR
   9. Token Fragmentation by Language
   10. Perplexity Detection Baseline
@@ -21,6 +21,7 @@ Figures:
   13. Thompson Sampling Entropy (exploration vs convergence)
   14. Response Length Analysis (refusals vs compliance)
   15. Strategy × Category Heatmap (attack-round data)
+  16. Cross-Architecture Transfer Comparison (Llama-3 vs Mistral-7B vs Qwen-2.5-7B)
 """
 
 import argparse
@@ -45,6 +46,7 @@ from medics.figures import (
     fig13_thompson_entropy,
     fig14_response_length,
     fig15_strategy_by_category,
+    fig16_transfer_comparison,
 )
 
 
@@ -74,6 +76,7 @@ def main():
     fig13_thompson_entropy(figures_dir)
     fig14_response_length(args.results_dir, figures_dir)
     fig15_strategy_by_category(figures_dir)
+    fig16_transfer_comparison(args.results_dir, figures_dir)
 
     print(f"\nAll figures saved to {figures_dir}/")
 

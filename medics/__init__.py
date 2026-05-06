@@ -12,7 +12,8 @@ Modules:
     defense        — SFT/DPO data construction
     metrics        — ASR, RG, HR, FRR, bootstrap CI, McNemar, Cohen's h, residual analysis
     fairness       — Algorithmic fairness metrics (DI, EO, Gini, Theil, counterfactual)
-    figures        — 15 publication-quality figure generators
+    figures        — 16 publication-quality figure generators
+    audit          — Clinician-audit packet building and scoring helpers
     tokenization   — Token fragmentation analysis (WHY code-switching works)
     detection      — Perplexity-based detection baseline
     timing         — Computational cost tracking (wall-clock, GPU hours)
@@ -39,4 +40,4 @@ Usage:
     from medics.ethics import generate_ethics_statement, format_ethics_section
 """
 
-__version__ = "2.6.0"
+__version__ = "2.7.2"
